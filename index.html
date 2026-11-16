@@ -14,7 +14,6 @@
   header h1 { font-size: 17px; font-weight: 700; }
   main { padding: 16px; max-width: 500px; margin: 0 auto; }
   
-  /* プロジェクト選択バー */
   .project-bar { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 10px 16px; display: flex; gap: 8px; align-items: center; overflow-x: auto; }
   .project-select { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; font-weight: bold; color: #0f766e; }
 
@@ -30,7 +29,6 @@
   .icon-btn { background: #f1f5f9; border: none; padding: 5px 8px; border-radius: 6px; font-size: 12px; color: #475569; cursor: pointer; font-weight: 600; }
   .icon-btn.del { color: #ef4444; background: #fef2f2; }
 
-  /* タイムライン */
   .day-section { margin-bottom: 20px; }
   .day-header { background: #0f766e; color: #fff; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
   .timeline-container { border-left: 3px solid #99f6e4; margin-left: 10px; padding-left: 16px; }
@@ -39,18 +37,15 @@
   .sch-meta { font-size: 12px; color: #475569; margin-bottom: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
   .sch-detail { font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 8px; border-radius: 6px; margin-top: 4px; white-space: pre-wrap; border-left: 2px solid #cbd5e1; }
 
-  /* フォーム */
   label.field-label { display: block; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 3px; }
   input, select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: #0d9488; }
   
-  /* ナビゲーション */
   nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 20; box-shadow: 0 -2px 6px rgba(0,0,0,0.04); }
   nav button { background: none; border: none; color: #64748b; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; width: 20%; }
   nav button.active { color: #0d9488; font-weight: bold; }
   nav button span.icon { font-size: 16px; }
   
-  /* モーダル */
   .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 50; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
   .modal.open { display: flex; }
   .modal-box { background: #fff; width: 100%; max-width: 380px; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin: auto; max-height: 90vh; overflow-y: auto; }
@@ -67,7 +62,6 @@
   <button type="button" onclick="openProjectModal()" style="background:#115e59; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">旅行切替・作成</button>
 </header>
 
-<!-- プロジェクト切り替えバー -->
 <div class="project-bar">
   <span style="font-size:12px; font-weight:bold; color:#475569; white-space:nowrap;">現在の旅行:</span>
   <select id="project-dropdown" class="project-select" onchange="switchProject(this.value)"></select>
@@ -110,7 +104,7 @@
     <div id="task-list"></div>
   </div>
 
-  <!-- 5. 精算・希望など予備 -->
+  <!-- 5. 精算 -->
   <div id="tab-money" class="tab-view" style="display:none;">
     <div class="header-row">
       <h2>💴 立て替え・精算</h2>
@@ -129,22 +123,17 @@
   <button type="button" id="nav-money" onclick="switchTab('money')"><span class="icon">💴</span>精算</button>
 </nav>
 
-<!-- モーダル：プロジェクト（旅行）作成・切替 -->
+<!-- モーダル各種 -->
 <div id="modal-project" class="modal">
   <div class="modal-box">
     <h3>旅行プロジェクトの管理</h3>
     <label class="field-label">新しい旅行名を入力</label>
-    <input type="text" id="new-proj-name" placeholder="例: 年末年始帰省旅行、夏休みUSJ">
-    <div style="margin-bottom:14px;">
-      <button type="button" class="btn-primary" style="width:100%;" onclick="createProject()">＋ 新しい旅行を作成して切り替える</button>
-    </div>
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" style="width:100%;" onclick="closeModal('modal-project')">閉じる</button>
-    </div>
+    <input type="text" id="new-proj-name" placeholder="例: 冬の温泉旅行">
+    <div style="margin-bottom:14px;"><button type="button" class="btn-primary" style="width:100%;" onclick="createProject()">＋ 新しい旅行を作成して切り替える</button></div>
+    <div class="modal-btns"><button type="button" class="btn-cancel" style="width:100%;" onclick="closeModal('modal-project')">閉じる</button></div>
   </div>
 </div>
 
-<!-- モーダル：予定の追加・編集 -->
 <div id="modal-schedule" class="modal">
   <div class="modal-box">
     <h3 id="sch-modal-heading">予定の追加</h3>
@@ -157,7 +146,7 @@
     <input type="text" id="sch-title" placeholder="例: 水族館到着">
     <label class="field-label">場所</label>
     <input type="text" id="sch-loc" placeholder="例: 駐車場P2集合">
-    <label class="field-label">担当・関係者（登録済み家族から選択）</label>
+    <label class="field-label">担当・関係者</label>
     <select id="sch-family"></select>
     <label class="field-label">詳細メモ</label>
     <textarea id="sch-detail" rows="2" placeholder="チケット購入済み等"></textarea>
@@ -168,7 +157,6 @@
   </div>
 </div>
 
-<!-- モーダル：家族の追加・編集 -->
 <div id="modal-family" class="modal">
   <div class="modal-box">
     <h3 id="fam-modal-heading">家族の追加</h3>
@@ -188,14 +176,13 @@
   </div>
 </div>
 
-<!-- モーダル：持ち物の追加・編集 -->
 <div id="modal-item" class="modal">
   <div class="modal-box">
     <h3 id="item-modal-heading">持ち物の追加</h3>
     <input type="hidden" id="item-edit-idx" value="-1">
     <label class="field-label">持ち物名（必須）</label>
-    <input type="text" id="item-name" placeholder="例: レジャーシート、保険証">
-    <label class="field-label">担当（誰が持って来るか）</label>
+    <input type="text" id="item-name" placeholder="例: レジャーシート">
+    <label class="field-label">担当</label>
     <select id="item-family"></select>
     <label class="field-label">備考</label>
     <input type="text" id="item-note" placeholder="大きめのやつ">
@@ -206,15 +193,14 @@
   </div>
 </div>
 
-<!-- モーダル：役割分担の追加・編集 -->
 <div id="modal-task" class="modal">
   <div class="modal-box">
-    <h3>役割分担の追加</h3>
+    <h3 id="task-modal-heading">役割分担の追加</h3>
     <input type="hidden" id="task-edit-idx" value="-1">
-    <label class="field-label">担当者（登録済み家族から選択）</label>
+    <label class="field-label">担当者</label>
     <select id="task-family"></select>
     <label class="field-label">やるべきこと・担当内容（必須）</label>
-    <textarea id="task-content" rows="2" placeholder="例: レストランの予約、チケット手配"></textarea>
+    <textarea id="task-content" rows="2" placeholder="例: レストランの予約"></textarea>
     <div class="modal-btns">
       <button type="button" class="btn-cancel" onclick="closeModal('modal-task')">キャンセル</button>
       <button type="button" class="btn-primary" onclick="saveTask()">保存する</button>
@@ -222,7 +208,6 @@
   </div>
 </div>
 
-<!-- モーダル：精算追加 -->
 <div id="modal-expense" class="modal">
   <div class="modal-box">
     <h3>立て替え支出の記録</h3>
@@ -255,7 +240,7 @@
   };
 
   try {
-    const saved = localStorage.getItem('famitabi_v4');
+    const saved = localStorage.getItem('famitabi_v5');
     if (saved) appData = JSON.parse(saved);
   } catch (e) {}
 
@@ -268,7 +253,7 @@
   }
 
   function saveOnly() {
-    try { localStorage.setItem('famitabi_v4', JSON.stringify(appData)); } catch (e) {}
+    try { localStorage.setItem('famitabi_v5', JSON.stringify(appData)); } catch (e) {}
   }
 
   function saveAndRender() {
@@ -287,7 +272,6 @@
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-  // --- プロジェクト管理 ---
   function openProjectModal() { openModal('modal-project'); }
   function switchProject(id) {
     appData.currentId = id;
@@ -312,7 +296,6 @@
     saveAndRender();
   }
 
-  // --- 家族セレクトボックス更新用ヘルパー ---
   function updateFamilySelect(elementId, selectedVal = '') {
     const curr = getCurr();
     const sel = document.getElementById(elementId);
@@ -366,6 +349,14 @@
     saveAndRender();
   }
 
+  function deleteSchedule(idx) {
+    if (confirm('この予定を削除しますか？')) {
+      const curr = getCurr();
+      curr.schedules.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
   // --- 家族管理 ---
   function openFamilyModal(idx) {
     document.getElementById('fam-edit-idx').value = idx;
@@ -404,6 +395,14 @@
     saveAndRender();
   }
 
+  function deleteFamily(idx) {
+    if (confirm('この家族を削除しますか？')) {
+      const curr = getCurr();
+      curr.families.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
   // --- 持ち物管理 ---
   function openItemModal(idx) {
     document.getElementById('item-edit-idx').value = idx;
@@ -440,16 +439,24 @@
     saveAndRender();
   }
 
+  function deleteItem(idx) {
+    const curr = getCurr();
+    curr.items.splice(idx, 1);
+    saveAndRender();
+  }
+
   // --- 役割分担管理 ---
   function openTaskModal(idx) {
     document.getElementById('task-edit-idx').value = idx;
     updateFamilySelect('task-family');
     const curr = getCurr();
     if (idx >= 0) {
+      document.getElementById('task-modal-heading').textContent = '役割分担の編集';
       const t = curr.tasks[idx];
       document.getElementById('task-family').value = t.family || '';
       document.getElementById('task-content').value = t.content || '';
     } else {
+      document.getElementById('task-modal-heading').textContent = '役割分担の追加';
       document.getElementById('task-content').value = '';
     }
     openModal('modal-task');
@@ -467,6 +474,12 @@
     if (idx >= 0) curr.tasks[idx] = item;
     else curr.tasks.push(item);
     closeModal('modal-task');
+    saveAndRender();
+  }
+
+  function deleteTask(idx) {
+    const curr = getCurr();
+    curr.tasks.splice(idx, 1);
     saveAndRender();
   }
 
@@ -492,18 +505,23 @@
     saveAndRender();
   }
 
-  // --- 画面全体描画 ---
+  function deleteExpense(idx) {
+    const curr = getCurr();
+    curr.expenses.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 画面描画 ---
   function render() {
     const curr = getCurr();
     
-    // ヘッダー＆セレクトボックス
     document.getElementById('header-project-title').textContent = '✈️ ' + curr.title;
     const projSel = document.getElementById('project-dropdown');
     projSel.innerHTML = Object.keys(appData.projects).map(id => 
       `<option value="${id}" ${id===appData.currentId?'selected':''}>${appData.projects[id].title}</option>`
     ).join('');
 
-    // 1. タイムライン（しおり）
+    // 1. タイムライン
     const schEl = document.getElementById('schedule-list');
     if (curr.schedules.length === 0) {
       schEl.innerHTML = '<div class="empty-card">予定がありません<br><small>「＋ 予定追加」からタイムラインを作成しましょう</small></div>';
@@ -524,7 +542,7 @@
               <div class="card">
                 <div class="card-actions">
                   <button type="button" class="icon-btn" onclick="openScheduleModal(${s.originalIdx})">編集</button>
-                  <button type="button" class="icon-btn del" onclick="curr.schedules.splice(${s.originalIdx},1);saveAndRender()">削除</button>
+                  <button type="button" class="icon-btn del" onclick="deleteSchedule(${s.originalIdx})">削除</button>
                 </div>
                 <div class="sch-time">🕒 ${s.time || '時間未定'}</div>
                 <div class="sch-title">${s.title}</div>
@@ -540,7 +558,7 @@
       `).join('');
     }
 
-    // 2. 参加家族
+    // 2. 家族
     const famEl = document.getElementById('family-list');
     if (curr.families.length === 0) {
       famEl.innerHTML = '<div class="empty-card">家族が登録されていません</div>';
@@ -549,7 +567,7 @@
         <div class="card">
           <div class="card-actions">
             <button type="button" class="icon-btn" onclick="openFamilyModal(${i})">編集</button>
-            <button type="button" class="icon-btn del" onclick="curr.families.splice(${i},1);saveAndRender()">削除</button>
+            <button type="button" class="icon-btn del" onclick="deleteFamily(${i})">削除</button>
           </div>
           <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${f.name}</div>
           <div style="font-size:12px; color:#0f766e; font-weight:600;">大人 ${f.adults}名 ・ 子供 ${f.kids}名</div>
@@ -561,7 +579,7 @@
     // 3. 持ち物
     const itemEl = document.getElementById('item-list');
     if (curr.items.length === 0) {
-      itemEl.innerHTML = '<div class="empty-card">持ち物が登録されていません<br><small>「＋ 持ち物追加」から登録</small></div>';
+      itemEl.innerHTML = '<div class="empty-card">持ち物が登録されていません</div>';
     } else {
       itemEl.innerHTML = curr.items.map((it, i) => `
         <div class="card" style="display:flex; align-items:center; gap:10px;">
@@ -572,7 +590,7 @@
           </div>
           <div style="display:flex; gap:4px;">
             <button type="button" class="icon-btn" onclick="openItemModal(${i})">編集</button>
-            <button type="button" class="icon-btn del" onclick="curr.items.splice(${i},1);saveAndRender()">削除</button>
+            <button type="button" class="icon-btn del" onclick="deleteItem(${i})">削除</button>
           </div>
         </div>
       `).join('');
@@ -581,7 +599,7 @@
     // 4. 役割分担
     const taskEl = document.getElementById('task-list');
     if (curr.tasks.length === 0) {
-      taskEl.innerHTML = '<div class="empty-card">役割分担が登録されていません<br><small>「＋ 分担追加」から登録</small></div>';
+      taskEl.innerHTML = '<div class="empty-card">役割分担が登録されていません</div>';
     } else {
       taskEl.innerHTML = curr.tasks.map((t, i) => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
@@ -591,13 +609,13 @@
           </div>
           <div style="display:flex; gap:4px;">
             <button type="button" class="icon-btn" onclick="openTaskModal(${i})">編集</button>
-            <button type="button" class="icon-btn del" onclick="curr.tasks.splice(${i},1);saveAndRender()">削除</button>
+            <button type="button" class="icon-btn del" onclick="deleteTask(${i})">削除</button>
           </div>
         </div>
       `).join('');
     }
 
-    // 5. 精算管理
+    // 5. 精算
     const expSumEl = document.getElementById('expense-summary');
     const expEl = document.getElementById('expense-list');
     const totalAmount = curr.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -624,7 +642,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-weight:bold; color:#0f766e; font-size:15px;">¥${e.amount.toLocaleString()}</span>
-            <button type="button" class="icon-btn del" onclick="curr.expenses.splice(${i},1);saveAndRender()">削除</button>
+            <button type="button" class="icon-btn del" onclick="deleteExpense(${i})">削除ボタン</button>
           </div>
         </div>
       `).join('');
