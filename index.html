@@ -1,1449 +1,184 @@
-    <label class="field-label">時間</label>
-    <input type="text" id="sch-time" placeholder="例: 10:00〜11:30">
-    <label class="field-label">予定タイトル</label>
-    <input type="text" id="sch-title" placeholder="例: 〇〇水族館へ移動">
-    <label class="field-label">場所・移動手段</label>
-    <input type="text" id="sch-place" placeholder="例: 自家用車 / 駐車場P2">
-    <label class="field-label">メモ・詳細</label>
-    <textarea id="sch-detail" rows="3" placeholder="予約番号や注意点など"></textarea>
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-schedule')">キャンセル</button>
-      <button type="button" class="btn-primary" onclick="saveSchedule()">保存する</button>
-    </div>
-  </div>
-</div>
+import http.server
+import socketserver
+import socket
+import os
+import urllib.parse
+import json
+import cgi
 
-<!-- 家族モーダル -->
-<div id="modal-family" class="modal">
-  <div class="modal-box">
-    <h3 id="fam-modal-heading">家族の追加</h3>
-    <input type="hidden" id="fam-edit-idx" value="-1">
-    <label class="field-label">家族名（グループ名）</label>
-    <input type="text" id="fam-name" placeholder="例: 田中家">
-    <label class="field-label">メンバー構成</label>
-    <input type="text" id="fam-members" placeholder="例: パパ、ママ、長男(5歳)、長女(2歳)">
-    <label class="field-label">大人人数（精算割り勘用）</label>
-    <input type="number" id="fam-adults" value="2" min="1">
-    <label class="field-label">備考（アレルギー・車など）</label>
-    <textarea id="fam-note" rows="2" placeholder="例: ミニバン7人乗り、卵アレルギーあり"></textarea>
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-family')">キャンセル</button>
-      <button type="button" class="btn-primary" onclick="saveFamily()">保存する</button>
-    </div>
-  </div>
-</div>
+PORT = 8080
+UPLOAD_DIR = "shared_files"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-<!-- 持ち物モーダル -->
-<div id="modal-item" class="modal">
-  <div class="modal-box">
-    <h3 id="item-modal-heading">持ち物の追加</h3>
-    <input type="hidden" id="item-edit-idx" value="-1">
-    <label class="field-label">持ち物名</label>
-    <input type="text" id="item-name" placeholder="例: レジャーシート、救急セット">
-    <label class="field-label">担当・区分</label>
-    <input type="text" id="item-owner" placeholder="例: 全員 / 佐藤家">
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-item')">キャンセル</button>
-      <button type="button" class="btn-primary" onclick="saveItem()">保存する</button>
-    </div>
-  </div>
-</div>
+# 自分のローカルIPアドレスを取得する関数
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
 
-<!-- 役割分担モーダル -->
-<div id="modal-task" class="modal">
-  <div class="modal-box">
-    <h3 id="task-modal-heading">役割分担の追加</h3>
-    <input type="hidden" id="task-edit-idx" value="-1">
-    <label class="field-label">タスク内容</label>
-    <input type="text" id="task-title" placeholder="例: 宿の予約確認、高速道路ルート調べ">
-    <label class="field-label">担当者・家族</label>
-    <input type="text" id="task-assignee" placeholder="例: 鈴木パパ">
-    <label class="field-label">期限・タイミング</label>
-    <input type="text" id="task-due" placeholder="例: 出発3日前まで">
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-task')">キャンセル</button>
-      <button type="button" class="btn-primary" onclick="saveTask()">保存する</button>
-    </div>
-  </div>
-</div>
+# ブラウザに表示するHTMLアプリ（UI）
+HTML_PAGE = """<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local File & Text Share</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; background: #f4f6f9; color: #333; }
+  h1 { font-size: 1.4rem; color: #1a73e8; text-align: center; }
+  .card { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
+  .btn { background: #1a73e8; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; margin-top: 10px; }
+  .btn:hover { background: #1557b0; }
+  textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 6px; padding: 8px; box-sizing: border-box; font-size: 1rem; }
+  ul { list-style: none; padding: 0; }
+  li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+  a { text-decoration: none; color: #1a73e8; font-weight: bold; word-break: break-all; }
+  .status { text-align: center; color: green; font-size: 0.9rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>📱↔️💻 ローカル共有アプリ</h1>
 
-<!-- 精算モーダル -->
-<div id="modal-expense" class="modal">
-  <div class="modal-box">
-    <h3>立て替え支出の記録</h3>
-    <label class="field-label">立て替えた家族</label>
-    <select id="exp-payer"></select>
-    <label class="field-label">項目名</label>
-    <input type="text" id="exp-title" placeholder="例: ランチ代、高速代、チケット代">
-    <label class="field-label">金額（円）</label>
-    <input type="number" id="exp-amount" placeholder="例: 12000" min="0">
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-expense')">キャンセル</button>
-      <button type="button" class="btn-primary" onclick="saveExpense()">記録する</button>
-    </div>
+  <div class="card">
+    <h3>📤 ファイル送信（アップロード）</h3>
+    <input type="file" id="fileInput" multiple style="width: 100%;">
+    <button class="btn" onclick="uploadFiles()">選択したファイルを送信</button>
+    <div id="uploadStatus" class="status"></div>
   </div>
-</div>
+
+  <div class="card">
+    <h3>📋 クリップボード・メモ共有</h3>
+    <textarea id="sharedText" placeholder="ここにURLやテキストを入力して送信すると、もう片方の端末でコピーできます"></textarea>
+    <button class="btn" onclick="sendText()">テキストを更新</button>
+    <button class="btn" style="background:#5f6368;" onclick="loadText()">最新テキストを取得</button>
+  </div>
+
+  <div class="card">
+    <h3>📁 共有フォルダ内のファイル一覧</h3>
+    <ul id="fileList"></ul>
+  </div>
 
 <script>
-  const STORAGE_KEY = 'famitabi_link_data_v1';
-
-  let appData = {
-    currentId: 'proj_1',
-    projects: {
-      proj_1: {
-        name: 'サンプル家族旅行',
-        schedules: [
-          { day: '1日目', time: '09:00', title: 'サービスエリア集合', place: '〇〇SA 下り', detail: 'トイレ休憩後に出発' }
-        ],
-        families: [
-          { name: '山田家', members: 'パパ、ママ、息子(6歳)', adults: 2, note: '車出し' },
-          { name: '佐藤家', members: 'パパ、ママ、娘(4歳)', adults: 2, note: '' }
-        ],
-        items: [
-          { name: 'ウェットティッシュ', owner: '各自', checked: false },
-          { name: 'モバイルバッテリー', owner: '山田家', checked: true }
-        ],
-        tasks: [
-          { title: 'レストランのランチ予約', assignee: '佐藤ママ', due: '1週間前', done: false }
-        ],
-        expenses: []
-      }
-    }
-  };
-
-  function loadData() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        appData = JSON.parse(saved);
-      } catch (e) {
-        console.error('データ読み込みエラー', e);
-      }
-    }
-  }
-
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-  }
-
-  function getCurrentProject() {
-    return appData.projects[appData.currentId];
-  }
-
-  // プロジェクト管理
-  function renderProjects() {
-    const dropdown = document.getElementById('project-dropdown');
-    dropdown.innerHTML = '';
-    Object.keys(appData.projects).forEach(id => {
-      const opt = document.createElement('option');
-      opt.value = id;
-      opt.textContent = appData.projects[id].name;
-      if (id === appData.currentId) opt.selected = true;
-      dropdown.appendChild(opt);
+  async function loadFiles() {
+    const res = await fetch('/api/files');
+    const files = await res.json();
+    const list = document.getElementById('fileList');
+    list.innerHTML = files.length ? '' : '<li>ファイルはありません</li>';
+    files.forEach(file => {
+      const li = document.createElement('li');
+      li.innerHTML = `<a href="/download/${encodeURIComponent(file)}" download>${file}</a>`;
+      list.appendChild(li);
     });
-    document.getElementById('header-project-title').textContent = '✈️ ' + getCurrentProject().name;
   }
 
-  function switchProject(id) {
-    appData.currentId = id;
-    saveData();
-    renderAll();
-  }
-
-  function openProjectModal() {
-    document.getElementById('new-proj-name').value = '';
-    document.getElementById('modal-project').classList.add('open');
-  }
-
-  function createProject() {
-    const name = document.getElementById('new-proj-name').value.trim();
-    if (!name) return alert('旅行名を入力してください');
-    const newId = 'proj_' + Date.now();
-    appData.projects[newId] = {
-      name: name,
-      schedules: [],
-      families: [],
-      items: [],
-      tasks: [],
-      expenses: []
-    };
-    appData.currentId = newId;
-    saveData();
-    closeModal('modal-project');
-    renderAll();
-  }
-
-  // タブ切り替え
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('tab-' + tabName).style.display = 'block';
-    document.getElementById('nav-' + tabName).classList.add('active');
-  }
-
-  function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('open');
-  }
-
-  // 1. しおり
-  function renderSchedules() {
-    const list = document.getElementById('schedule-list');
-    const schedules = getCurrentProject().schedules;
-    if (!schedules.length) {
-      list.innerHTML = '<div class="empty-card">予定がまだありません。「＋ 予定追加」から登録しましょう。</div>';
-      return;
+  async function uploadFiles() {
+    const input = document.getElementById('fileInput');
+    if (!input.files.length) return alert('ファイルを選択してください');
+    const status = document.getElementById('uploadStatus');
+    status.textContent = '送信中...';
+    const formData = new FormData();
+    for (const file of input.files) {
+      formData.append('files', file);
     }
-    const grouped = {};
-    schedules.forEach((item, idx) => {
-      const d = item.day || '日程未定';
-      if (!grouped[d]) grouped[d] = [];
-      grouped[d].push({ ...item, idx });
+    await fetch('/api/upload', { method: 'POST', body: formData });
+    input.value = '';
+    status.textContent = '送信完了！';
+    loadFiles();
+  }
+
+  async function sendText() {
+    const text = document.getElementById('sharedText').value;
+    await fetch('/api/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
     });
-
-    let html = '';
-    Object.keys(grouped).forEach(day => {
-      html += `<div class="day-section"><div class="day-header">${escapeHtml(day)}</div><div class="timeline-container">`;
-      grouped[day].forEach(s => {
-        html += `
-          <div class="card">
-            <div class="card-actions">
-              <button class="icon-btn" onclick="openScheduleModal(${s.idx})">編集</button>
-              <button class="icon-btn del" onclick="deleteItem('schedules', ${s.idx})">削除</button>
-            </div>
-            <div class="sch-time">${escapeHtml(s.time)}</div>
-            <div class="sch-title">${escapeHtml(s.title)}</div>
-            ${s.place ? `<div class="sch-meta">📍 ${escapeHtml(s.place)}</div>` : ''}
-            ${s.detail ? `<div class="sch-detail">${escapeHtml(s.detail)}</div>` : ''}
-          </div>`;
-      });
-      html += `</div></div>`;
-    });
-    list.innerHTML = html;
+    alert('テキストを共有しました');
   }
 
-  function openScheduleModal(idx) {
-    document.getElementById('sch-edit-idx').value = idx;
-    if (idx >= 0) {
-      const s = getCurrentProject().schedules[idx];
-      document.getElementById('sch-modal-heading').textContent = '予定の編集';
-      document.getElementById('sch-day').value = s.day;
-      document.getElementById('sch-time').value = s.time;
-      document.getElementById('sch-title').value = s.title;
-      document.getElementById('sch-place').value = s.place;
-      document.getElementById('sch-detail').value = s.detail;
-    } else {
-      document.getElementById('sch-modal-heading').textContent = '予定の追加';
-      document.getElementById('sch-day').value = '1日目';
-      document.getElementById('sch-time').value = '';
-      document.getElementById('sch-title').value = '';
-      document.getElementById('sch-place').value = '';
-      document.getElementById('sch-detail').value = '';
-    }
-    document.getElementById('modal-schedule').classList.add('open');
+  async function loadText() {
+    const res = await fetch('/api/text');
+    const data = await res.json();
+    document.getElementById('sharedText').value = data.text;
   }
 
-  function saveSchedule() {
-    const idx = parseInt(document.getElementById('sch-edit-idx').value, 10);
-    const title = document.getElementById('sch-title').value.trim();
-    if (!title) return alert('予定タイトルを入力してください');
-    const obj = {
-      day: document.getElementById('sch-day').value.trim() || '1日目',
-      time: document.getElementById('sch-time').value.trim(),
-      title: title,
-      place: document.getElementById('sch-place').value.trim(),
-      detail: document.getElementById('sch-detail').value.trim()
-    };
-    const list = getCurrentProject().schedules;
-    if (idx >= 0) list[idx] = obj;
-    else list.push(obj);
-    saveData();
-    closeModal('modal-schedule');
-    renderSchedules();
-  }
-
-  // 2. 参加家族
-  function renderFamilies() {
-    const list = document.getElementById('family-list');
-    const families = getCurrentProject().families;
-    if (!families.length) {
-      list.innerHTML = '<div class="empty-card">参加家族が登録されていません。</div>';
-      return;
-    }
-    list.innerHTML = families.map((f, idx) => `
-      <div class="card">
-        <div class="card-actions">
-コードは注意してご使用ください。
-編集
-削除
-
-${escapeHtml(f.name)} (大人${f.adults}名)
-👥 ${escapeHtml(f.members)}
-${f.note ? <div class="sch-detail">${escapeHtml(f.note)}</div> : ''}
-
-`).join('');
-}
-function openFamilyModal(idx) {
-document.getElementById('fam-edit-idx').value = idx;
-if (idx >= 0) {
-const f = getCurrentProject().families[idx];
-document.getElementById('fam-modal-heading').textContent = '家族の編集';
-document.getElementById('fam-name').value = f.name;
-document.getElementById('fam-members').value = f.members;
-document.getElementById('fam-adults').value = f.adults;
-document.getElementById('fam-note').value = f.note;
-} else {
-document.getElementById('fam-modal-heading').textContent = '家族の追加';
-document.getElementById('fam-name').value = '';
-document.getElementById('fam-members').value = '';
-document.getElementById('fam-adults').value = 2;
-document.getElementById('fam-note').value = '';
-}
-document.getElementById('modal-family').classList.add('open');
-}
-function saveFamily() {
-const idx = parseInt(document.getElementById('fam-edit-idx').value, 10);
-const name = document.getElementById('fam-name').value.trim();
-if (!name) return alert('家族名を入力してください');
-const obj = {
-name: name,
-members: document.getElementById('fam-members').value.trim(),
-adults: parseInt(document.getElementById('fam-adults').value, 10) || 1,
-note: document.getElementById('fam-note').value.trim()
-};
-const list = getCurrentProject().families;
-if (idx >= 0) list[idx] = obj;
-else list.push(obj);
-saveData();
-closeModal('modal-family');
-renderFamilies();
-renderExpenses();
-}
-// 3. 持ち物
-function renderItems() {
-const list = document.getElementById('item-list');
-const items = getCurrentProject().items;
-if (!items.length) {
-list.innerHTML = '持ち物リストが空です。';
-return;
-}
-list.innerHTML = items.map((it, idx) => <div class="card" style="display:flex; align-items:center; gap:10px;"> <input type="checkbox" style="width:20px; height:20px; margin:0;" ${it.checked ? 'checked' : ''} onchange="toggleCheck('items', ${idx})"> <div style="flex:1; ${it.checked ? 'text-decoration:line-through; opacity:0.6;' : ''}"> <div style="font-weight:bold; font-size:14px;">${escapeHtml(it.name)}</div> <div style="font-size:11px; color:#64748b;">担当: ${escapeHtml(it.owner || '未定')}</div> </div> <button class="icon-btn del" onclick="deleteItem('items', ${idx})">削除</button> </div>).join('');
-}
-function openItemModal(idx) {
-document.getElementById('item-edit-idx').value = idx;
-document.getElementById('item-name').value = '';
-document.getElementById('item-owner').value = '';
-document.getElementById('modal-item').classList.add('open');
-}
-function saveItem() {
-const name = document.getElementById('item-name').value.trim();
-if (!name) return alert('持ち物名を入力してください');
-getCurrentProject().items.push({
-name: name,
-owner: document.getElementById('item-owner').value.trim() || '全員',
-checked: false
-});
-saveData();
-closeModal('modal-item');
-renderItems();
-}
-// 4. 役割分担
-function renderTasks() {
-const list = document.getElementById('task-list');
-const tasks = getCurrentProject().tasks;
-if (!tasks.length) {
-list.innerHTML = '役割分担がまだ登録されていません。';
-return;
-}
-list.innerHTML = tasks.map((t, idx) => <div class="card" style="display:flex; align-items:center; gap:10px;"> <input type="checkbox" style="width:20px; height:20px; margin:0;" ${t.done ? 'checked' : ''} onchange="toggleCheck('tasks', ${idx})"> <div style="flex:1; ${t.done ? 'text-decoration:line-through; opacity:0.6;' : ''}"> <div style="font-weight:bold; font-size:14px;">${escapeHtml(t.title)}</div> <div style="font-size:11px; color:#0f766e;">担当: ${escapeHtml(t.assignee || '未定')} ${t.due ? ' / 期限: ' + escapeHtml(t.due) : ''}</div> </div> <button class="icon-btn del" onclick="deleteItem('tasks', ${idx})">削除</button> </div>).join('');
-}
-function openTaskModal(idx) {
-document.getElementById('task-title').value = '';
-document.getElementById('task-assignee').value = '';
-document.getElementById('task-due').value = '';
-document.getElementById('modal-task').classList.add('open');
-}
-function saveTask() {
-const title = document.getElementById('task-title').value.trim();
-if (!title) return alert('タスク内容を入力してください');
-getCurrentProject().tasks.push({
-title: title,
-assignee: document.getElementById('task-assignee').value.trim() || '未定',
-due: document.getElementById('task-due').value.trim(),
-done: false
-});
-saveData();
-closeModal('modal-task');
-renderTasks();
-}
-// 5. 精算（家族単位の均等割り勘計算）
-function renderExpenses() {
-const proj = getCurrentProject();
-const summaryEl = document.getElementById('expense-summary');
-const listEl = document.getElementById('expense-list');
-if (!proj.expenses.length) {
-summaryEl.innerHTML = '';
-listEl.innerHTML = '立て替え記録はまだありません。';
-return;
-}
-const total = proj.expenses.reduce((sum, e) => sum + e.amount, 0);
-const famCount = proj.families.length || 1;
-const perFamily = Math.round(total / famCount);
-const paidByFam = {};
-proj.families.forEach(f => paidByFam[f.name] = 0);
-proj.expenses.forEach(e => {
-paidByFam[e.payer] = (paidByFam[e.payer] || 0) + e.amount;
-});
-let summaryHtml = <div class="card" style="background:#f0fdfa; border-color:#99f6e4;"> <div style="font-size:13px; color:#0f766e; font-weight:bold; margin-bottom:6px;">💰 精算サマリー（家族数均等割り）</div> <div style="font-size:14px; margin-bottom:8px;">合計支出: <b>${total.toLocaleString()}円</b>（1家族あたり約 <b>${perFamily.toLocaleString()}円</b>）</div> <div style="font-size:12px; border-top:1px solid #ccfbf1; padding-top:6px;">;
-Object.keys(paidByFam).forEach(fam => {
-const diff = paidByFam[fam] - perFamily;
-const status = diff > 0
-? <span style="color:#0d9488; font-weight:bold;">+${diff.toLocaleString()}円 受取</span>
-: diff < 0
-? <span style="color:#ef4444; font-weight:bold;">${diff.toLocaleString()}円 支払</span>
-: <span>±0円</span>;
-summaryHtml += <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span>${escapeHtml(fam)} (立替: ${paidByFam[fam].toLocaleString()}円)</span><span>${status}</span></div>;
-});
-summaryHtml += </div></div>;
-summaryEl.innerHTML = summaryHtml;
-listEl.innerHTML = proj.expenses.map((e, idx) => <div class="card"> <div class="card-actions"> <button class="icon-btn del" onclick="deleteItem('expenses', ${idx})">削除</button> </div> <div style="font-size:11px; color:#0f766e; font-weight:bold;">立替: ${escapeHtml(e.payer)}</div> <div style="font-size:15px; font-weight:bold;">${escapeHtml(e.title)}</div> <div style="font-size:14px; color:#1e293b; margin-top:2px;">${e.amount.toLocaleString()} 円</div> </div>).join('');
-}
-function openExpenseModal() {
-const families = getCurrentProject().families;
-if (!families.length) {
-return alert('先に「家族」タブから参加家族を1つ以上登録してください。');
-}
-const select = document.getElementById('exp-payer');
-select.innerHTML = families.map(f => <option value="${escapeHtml(f.name)}">${escapeHtml(f.name)}</option>).join('');
-document.getElementById('exp-title').value = '';
-document.getElementById('exp-amount').value = '';
-document.getElementById('modal-expense').classList.add('open');
-}
-function saveExpense() {
-const title = document.getElementById('exp-title').value.trim();
-const amount = parseInt(document.getElementById('exp-amount').value, 10);
-if (!title || isNaN(amount) || amount <= 0) return alert('項目名と正しい金額を入力してください');
-getCurrentProject().expenses.push({
-payer: document.getElementById('exp-payer').value,
-title: title,
-amount: amount
-});
-saveData();
-closeModal('modal-expense');
-renderExpenses();
-}
-// 共通ヘルパー
-function toggleCheck(key, idx) {
-const item = getCurrentProject()[key][idx];
-if (key === 'items') item.checked = !item.checked;
-if (key === 'tasks') item.done = !item.done;
-saveData();
-renderAll();
-}
-function deleteItem(key, idx) {
-if (!confirm('削除してもよろしいですか？')) return;
-getCurrentProject()[key].splice(idx, 1);
-saveData();
-renderAll();
-}
-function escapeHtml(str) {
-if (!str) return '';
-return String(str)
-.replace(/&/g, '&')
-.replace(/</g, '<')
-.replace(/>/g, '>')
-.replace(/"/g, '"')
-.replace(/'/g, ''');
-}
-function renderAll() {
-renderProjects();
-renderSchedules();
-renderFamilies();
-renderItems();
-renderTasks();
-renderExpenses();
-}
-// 初期化
-loadData();
-renderAll();
-
-
-
-### 実装した主な機能
-* **全タブの登録・編集・削除**：しおり・家族・持ち物・分担・精算のすべてが動作します。
-* **自動データ保存**：ブラウザの `localStorage` に自動保存されるため、ページを閉じてもデータが消えません。
-* **旅行プロジェクト切替**：複数の旅行プランを作成・切り替えできます。
-* **家族別精算計算**：参加家族ごとの立て替え額から、家族数均等割りでの過不足（受取・支払額）を自動計算します。
-
-<FollowUp>
-このアプリについて、さらに追加したい機能があれば調整できます。
-* **精算の割り勘方法**（家族数均等割りではなく、登録した「大人人数」に応じた傾斜割り勘にするなど）
-* **LINEなどへのテキスト出力機能**（しおりや精算結果をワンタップでコピーして家族グループに送れる機能）
-* **データのバックアップ・引き継ぎ機能**（JSONやURLで他の家族に共有できる仕組み）
-
-追加したい機能や修正点があればお知らせください！
-</FollowUp>
-
-全て
-
-ご提案した3つの機能（①大人人数での傾斜割り勘計算、②LINE共有用テキストコピー機能、③URL・データコードによるデータ引き継ぎ・共有機能）をすべて組み込んだ、完全版のHTMLコードです。
-1つのHTMLファイルとして完結しており、そのままコピーして保存・公開すればすぐに使えます。
-
-追加された機能の詳細
-
-• ① 精算方法の切り替え：「家族数で均等割り」と「大人人数で傾斜割り」をボタンひとつで切り替えられ、「誰が誰にいくら払うか」の送金ルートまで自動計算します。
-• ② LINE共有用テキスト出力：しおり・持ち物・分担・精算結果をまとめた見やすいテキストを生成し、ワンタップでクリップボードにコピーできます。
-• ③ URL共有＆バックアップ：ヘッダーの「旅行切替・作成（共有）」モーダルから、現在の旅行データ入りの共有URLを発行できます。このURLをLINEで家族に送って開いてもらうと、同じ旅行データが相手のスマホにも自動で読み込まれます。
-
-ファミ旅リンク（完全版HTML）
-
-html
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ファミ旅リンク</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0d9488">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { background: #f1f5f9; color: #1e293b; padding-bottom: 85px; }
-  header { background: #0f766e; color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); gap: 8px; }
-  header h1 { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-btns { display: flex; gap: 6px; flex-shrink: 0; }
-  .header-btn { background: #115e59; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
-  main { padding: 16px; max-width: 500px; margin: 0 auto; }
-  
-  .project-bar { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
-  .project-select { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; font-weight: bold; color: #0f766e; }
-
-  .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .header-row h2 { font-size: 17px; color: #0f172a; font-weight: 700; }
-  .btn-primary { background: #0d9488; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-  .btn-primary:active { opacity: 0.85; }
-  .btn-sub { background: #e2e8f0; color: #334155; border: none; padding: 7px 11px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
-  
-  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .empty-card { text-align: center; padding: 32px 16px; border: 2px dashed #cbd5e1; color: #64748b; border-radius: 12px; background: #fff; font-size: 13px; }
-  
-  .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-  .icon-btn { background: #f1f5f9; border: none; padding: 5px 8px; border-radius: 6px; font-size: 12px; color: #475569; cursor: pointer; font-weight: 600; }
-  .icon-btn.del { color: #ef4444; background: #fef2f2; }
-
-  .day-section { margin-bottom: 20px; }
-  .day-header { background: #0f766e; color: #fff; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-  .timeline-container { border-left: 3px solid #99f6e4; margin-left: 10px; padding-left: 16px; }
-  .sch-time { font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 2px; }
-  .sch-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; padding-right: 75px; }
-  .sch-meta { font-size: 12px; color: #475569; margin-bottom: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .sch-detail { font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 8px; border-radius: 6px; margin-top: 4px; white-space: pre-wrap; border-left: 2px solid #cbd5e1; }
-
-  .split-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 3px; margin-bottom: 12px; }
-  .split-toggle button { flex: 1; border: none; background: transparent; padding: 6px; font-size: 12px; font-weight: bold; color: #475569; border-radius: 6px; cursor: pointer; }
-  .split-toggle button.active { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-
-  label.field-label { display: block; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 3px; }
-  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #0d9488; }
-  
-  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 20; box-shadow: 0 -2px 6px rgba(0,0,0,0.04); }
-  nav button { background: none; border: none; color: #64748b; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; width: 20%; }
-  nav button.active { color: #0d9488; font-weight: bold; }
-  nav button span.icon { font-size: 16px; }
-  
-  .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 50; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
-  .modal.open { display: flex; }
-  .modal-box { background: #fff; width: 100%; max-width: 390px; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin: auto; max-height: 90vh; overflow-y: auto; }
-  .modal-box h3 { margin-bottom: 12px; font-size: 16px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
-  .modal-btns { display: flex; gap: 8px; margin-top: 6px; }
-  .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
-  .btn-cancel { background: #f1f5f9; color: #475569; }
-  .divider { border-top: 1px solid #e2e8f0; margin: 14px 0; }
-</style>
-</head>
-<body>
-
-<header>
-  <h1 id="header-project-title">✈️ ファミ旅リンク</h1>
-  <div class="header-btns">
-    <button type="button" class="header-btn" onclick="openShareTextModal()">📤 LINE共有</button>
-    <button type="button" class="header-btn" onclick="openProjectModal()">⚙️ 旅行管理</button>
-  </div>
-</header>
-
-<div class="project-bar">
-  <span style="font-size:12px; font-weight:bold; color:#475569; white-space:nowrap;">現在の旅行:</span>
-  <select id="project-dropdown" class="project-select" onchange="switchProject(this.value)"></select>
-</div>
-
-<main>
-  <!-- 1. タイムライン（しおり） -->
-  <div id="tab-timeline" class="tab-view">
-    <div class="header-row">
-      <h2>📅 旅のしおり</h2>
-      <button type="button" class="btn-primary" onclick="openScheduleModal(-1)">＋ 予定追加</button>
-    </div>
-    <div id="schedule-list"></div>
-  </div>
-
-  <!-- 2. 参加家族 -->
-  <div id="tab-families" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>👨‍👩‍👧‍👦 参加家族</h2>
-      <button type="button" class="btn-primary" onclick="openFamilyModal(-1)">＋ 家族追加</button>
-    </div>
-    <div id="family-list"></div>
-  </div>
-
-  <!-- 3. 持ち物 -->
-  <div id="tab-items" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>🎒 持ち物リスト</h2>
-      <button type="button" class="btn-primary" onclick="openItemModal(-1)">＋ 持ち物追加</button>
-    </div>
-    <div id="item-list"></div>
-  </div>
-
-  <!-- 4. 役割分担 -->
-  <div id="tab-tasks" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>📝 役割分担</h2>
-      <button type="button" class="btn-primary" onclick="openTaskModal(-1)">＋ 分担追加</button>
-    </div>
-    <div id="task-list"></div>
-  </div>
-
-  <!-- 5. 精算 -->
-  <div id="tab-money" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>💴 立て替え・精算</h2>
-      <button type="button" class="btn-primary" onclick="openExpenseModal()">＋ 支出記録</button>
-    </div>
-    <div class="split-toggle">
-      <button type="button" id="mode-family" class="active" onclick="setSplitMode('family')">家族数で均等割り</button>
-      <button type="button" id="mode-adult" onclick="setSplitMode('adult')">大人人数で傾斜割り</button>
-    </div>
-    <div id="expense-summary"></div>
-    <div id="expense-list"></div>
-  </div>
-</main>
-
-<nav>
-  <button type="button" id="nav-timeline" class="active" onclick="switchTab('timeline')"><span class="icon">📅</span>しおり</button>
-  <button type="button" id="nav-families" onclick="switchTab('families')"><span class="icon">👨‍👩‍👧‍👦</span>家族</button>
-  <button type="button" id="nav-items" onclick="switchTab('items')"><span class="icon">🎒</span>持ち物</button>
-  <button type="button" id="nav-tasks" onclick="switchTab('tasks')"><span class="icon">📝</span>分担</button>
-  <button type="button" id="nav-money" onclick="switchTab('money')"><span class="icon">💴</span>精算</button>
-</nav>
-
-<!-- 旅行管理・データ共有モーダル -->
-<div id="modal-project" class="modal">
-  <div class="modal-box">
-    <h3>⚙️ 旅行プロジェクト管理・共有</h3>
-    <label class="field-label">新しい旅行を作成</label>
-    <input type="text" id="new-proj-name" placeholder="例: 冬の温泉旅行">
-    <button type="button" class="btn-primary" style="width:100%; margin-bottom:8px;" onclick="createProject()">＋ 新しい旅行を作成して切替</button>
-
-    <div class="divider"></div>
-    <label class="field-label">🔗 家族にこの旅行データを共有（URL発行）</label>
-    <p style="font-size:11px; color:#64748b; margin-bottom:6px;">現在の旅行データを埋め込んだリンクを作成します。LINE等で送って開くと相手の端末にも取り込めます。</p>
-    <button type="button" class="btn-sub" style="width:100%; margin-bottom:8px;" onclick="copyShareUrl()">📋 共有用URLをコピーする</button>
-
-    <div class="divider"></div>
-    <label class="field-label">💾 バックアップ（JSONテキスト出力・復元）</label>
-    <textarea id="backup-json" rows="3" placeholder="ここにバックアップデータが表示されます"></textarea>
-    <div style="display:flex; gap:6px; margin-bottom:8px;">
-      <button type="button" class="btn-sub" style="flex:1;" onclick="exportBackup()">データ表示</button>
-      <button type="button" class="btn-sub" style="flex:1;" onclick="importBackup()">貼り付けて復元</button>
-    </div>
-
-    <div class="modal-btns">
-      <button type="button" class="btn-cancel" onclick="closeModal('modal-project')">閉じる</button>
-    </div>
-  </div>
-</div>
-
-<!-- LINEテキスト共有モーダル -->
-<div id="modal-share-text" class="modal">
-  <div class="modal-box">
-    <h3>📤 LINE共有用テキスト</h3>
-コードは注意してご使用ください。
-しおり・持ち物・分担・精算結果をまとめたテキストです。
-
-
-閉じる
-📋 コピーする
-
-
-予定の追加
-日にち
-時間
-予定タイトル
-場所・移動手段
-メモ・詳細
-キャンセル
-保存する
-
-
-家族の追加
-家族名（グループ名）
-メンバー構成
-大人人数（傾斜割り勘用）
-備考（アレルギー・車など）
-キャンセル
-保存する
-
-
-持ち物の追加
-持ち物名
-担当・区分
-キャンセル
-保存する
-
-
-役割分担の追加
-タスク内容
-担当者・家族
-期限・タイミング
-キャンセル
-保存する
-
-
-立て替え支出の記録
-立て替えた家族
-項目名
-金額（円）
-キャンセル
-記録する
-
-
-const STORAGE_KEY = 'famitabi_link_data_v2';
-let appData = {
-currentId: 'proj_1',
-projects: {
-proj_1: {
-name: 'サンプル家族旅行',
-splitMode: 'family',
-schedules: [
-{ day: '1日目', time: '09:00', title: 'サービスエリア集合', place: '〇〇SA 下り', detail: 'トイレ休憩後に出発' }
-],
-families: [
-{ name: '山田家', members: 'パパ、ママ、息子(6歳)', adults: 2, note: '車出し' },
-{ name: '佐藤家', members: 'パパ、ママ、娘(4歳)', adults: 2, note: '' }
-],
-items: [
-{ name: 'ウェットティッシュ', owner: '各自', checked: false },
-{ name: 'モバイルバッテリー', owner: '山田家', checked: true }
-],
-tasks: [
-{ title: 'レストランのランチ予約', assignee: '佐藤ママ', due: '1週間前', done: false }
-],
-expenses: []
-}
-}
-};
-// UTF-8対応Base64エンコード・デコード
-function encodeShareData(obj) {
-const json = JSON.stringify(obj);
-const bytes = new TextEncoder().encode(json);
-let bin = '';
-bytes.forEach(b => bin += String.fromCharCode(b));
-return btoa(bin);
-}
-
-
-
-
-
-
-全てのコードを表記
-
-最初から最後まで省略なしの完全なHTMLファイル（1ファイル完結型）です。
-このコードをすべてコピーして index.html などの名前で保存すれば、そのままブラウザやスマホで動作します。
-また、先ほどご提案した以下の便利機能もすべて組み込み済みです。
-• 大人人数に応じた傾斜割り勘（家族単位の均等割りとの切り替えも可能）
-• LINE等への共有用テキストコピー機能（しおり・精算結果をワンタップでコピー）
-• データ引き継ぎ機能（他の家族に旅行データを丸ごと送れる共有コードの発行・読み込み）
-html
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ファミ旅リンク</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0d9488">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { background: #f1f5f9; color: #1e293b; padding-bottom: 85px; }
-  header { background: #0f766e; color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
-  header h1 { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%; }
-  main { padding: 16px; max-width: 500px; margin: 0 auto; }
-  
-  .project-bar { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 10px 16px; display: flex; gap: 8px; align-items: center; overflow-x: auto; }
-  .project-select { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; font-weight: bold; color: #0f766e; }
-
-  .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 6px; }
-  .header-row h2 { font-size: 17px; color: #0f172a; font-weight: 700; flex: 1; }
-  .btn-primary { background: #0d9488; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap; }
-  .btn-primary:active { opacity: 0.85; }
-  .btn-sub { background: #e2e8f0; color: #334155; border: none; padding: 8px 10px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .btn-sub:active { opacity: 0.85; }
-  
-  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .empty-card { text-align: center; padding: 32px 16px; border: 2px dashed #cbd5e1; color: #64748b; border-radius: 12px; background: #fff; font-size: 13px; }
-  
-  .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
-  .icon-btn { background: #f1f5f9; border: none; padding: 5px 8px; border-radius: 6px; font-size: 12px; color: #475569; cursor: pointer; font-weight: 600; }
-  .icon-btn.del { color: #ef4444; background: #fef2f2; }
-
-  .day-section { margin-bottom: 20px; }
-  .day-header { background: #0f766e; color: #fff; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-  .timeline-container { border-left: 3px solid #99f6e4; margin-left: 10px; padding-left: 16px; }
-  .sch-time { font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 2px; }
-  .sch-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; padding-right: 85px; }
-  .sch-meta { font-size: 12px; color: #475569; margin-bottom: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .sch-detail { font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 8px; border-radius: 6px; margin-top: 4px; white-space: pre-wrap; border-left: 2px solid #cbd5e1; }
-
-  label.field-label { display: block; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 3px; }
-  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #0d9488; }
-  
-  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 20; box-shadow: 0 -2px 6px rgba(0,0,0,0.04); }
-  nav button { background: none; border: none; color: #64748b; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; width: 20%; }
-  nav button.active { color: #0d9488; font-weight: bold; }
-  nav button span.icon { font-size: 16px; }
-  
-  .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 50; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
-  .modal.open { display: flex; }
-  .modal-box { background: #fff; width: 100%; max-width: 380px; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin: auto; max-height: 90vh; overflow-y: auto; }
-  .modal-box h3 { margin-bottom: 12px; font-size: 16px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
-  .modal-btns { display: flex; gap: 8px; margin-top: 4px; }
-  .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
-  .btn-cancel { background: #f1f5f9; color: #475569; }
-  .divider { border-top: 1px solid #e2e8f0; margin: 14px 0; }
-  .split-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 3px; margin-bottom: 12px; }
-  .split-toggle button { flex: 1; border: none; background: transparent; padding: 6px; font-size: 12px; font-weight: bold; color: #475569; border-radius: 6px; cursor: pointer; }
-  .split-toggle button.active { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-</style>
-</head>
-<body>
-
-<header>
-  <h1 id="header-project-title">✈️ ファミ旅リンク</h1>
-  <button type="button" onclick="openProjectModal()" style="background:#115e59; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">旅行管理・共有</button>
-</header>
-
-<div class="project-bar">
-  <span style="font-size:12px; font-weight:bold; color:#475569; white-space:nowrap;">現在の旅行:</span>
-  <select id="project-dropdown" class="project-select" onchange="switchProject(this.value)"></select>
-</div>
-
-<main>
-  <!-- 1. タイムライン（しおり） -->
-  <div id="tab-timeline" class="tab-view">
-    <div class="header-row">
-      <h2>📅 旅のしおり</h2>
-      <button type="button" class="btn-sub" onclick="copyScheduleText()">📋 LINE共有</button>
-      <button type="button" class="btn-primary" onclick="openScheduleModal(-1)">＋ 予定追加</button>
-    </div>
-    <div id="schedule-list"></div>
-  </div>
-
-  <!-- 2. 参加家族 -->
-  <div id="tab-families" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>👨‍👩‍👧‍👦 参加家族</h2>
-      <button type="button" class="btn-primary" onclick="openFamilyModal(-1)">＋ 家族追加</button>
-    </div>
-    <div id="family-list"></div>
-  </div>
-
-  <!-- 3. 持ち物 -->
-  <div id="tab-items" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>🎒 持ち物リスト</h2>
-      <button type="button" class="btn-primary" onclick="openItemModal(-1)">＋ 持ち物追加</button>
-    </div>
-    <div id="item-list"></div>
-  </div>
-
-  <!-- 4. 役割分担 -->
-  <div id="tab-tasks" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>📝 役割分担</h2>
-      <button type="button" class="btn-primary" onclick="openTaskModal(-1)">＋ 分担追加</button>
-    </div>
-    <div id="task-list"></div>
-  </div>
-
-  <!-- 5. 精算 -->
-  <div id="tab-money" class="tab-view" style="display:none;">
-    <div class="header-row">
-      <h2>💴 立て替え・精算</h2>
-      <button type="button" class="btn-sub" onclick="copyExpenseText()">📋 精算共有</button>
-      <button type="button" class="btn-primary" onclick="openExpenseModal()">＋ 支出記録</button>
-    </div>
-    <div class="split-toggle">
-      <button type="button" id="mode-adult" class="active" onclick="setSplitMode('adult')">大人人数で傾斜割り</button>
-      <button type="button" id="mode-family" onclick="setSplitMode('family')">家族数で均等割り</button>
-    </div>
-    <div id="expense-summary"></div>
-    <div id="expense-list"></div>
-  </div>
-</main>
-
-<nav>
-  <button type="button" id="nav-timeline" class="active" onclick="switchTab('timeline')"><span class="icon">📅</span>しおり</button>
-  <button type="button" id="nav-families" onclick="switchTab('families')"><span class="icon">👨‍👩‍👧‍👦</span>家族</button>
-  <button type="button" id="nav-items" onclick="switchTab('items')"><span class="icon">🎒</span>持ち物</button>
-  <button type="button" id="nav-tasks" onclick="switchTab('tasks')"><span class="icon">📝</span>分担</button>
-  <button type="button" id="nav-money" onclick="switchTab('money')"><span class="icon">💴</span>精算</button>
-</nav>
-
-<!-- 旅行プロジェクト管理・データ共有モーダル -->
-<div id="modal-project" class="modal">
-  <div class="modal-box">
-    <h3>旅行プロジェクトの管理・共有</h3>
-    <label class="field-label">新しい旅行を作成</label>
-    <input type="text" id="new-proj-name" placeholder="例: 冬の温泉旅行">
-    <button type="button" class="btn-primary" style="width:100%; margin-bottom:10px;" onclick="createProject()">＋ 新しい旅行を作成して切替</button>
-
-    <div class="divider"></div>
-    <label class="field-label">他の家族へデータを送る（引き継ぎコード）</label>
-    <button type="button" class="btn-sub" style="width:100%; margin-bottom:10px; padding:10px;" onclick="exportProjectCode()">📤 現在の旅行データをコピーする</button>
-
-    <label class="field-label">送られてきたデータを取り込む</label>
-    <textarea id="import-code-input" rows="2" placeholder="ここに共有コードを貼り付け"></textarea>
-    <button type="button" class="btn-sub" style="width:100%; margin-bottom:10px; padding:10px;" onclick="importProjectCode()">📥 コードから旅行データを取り込む</button>
-
-    <div class="divider"></div>
-    <button type="button" class="icon-btn del" style="width:100%; padding:10px; margin-bottom:10px;" onclick="deleteCurrentProject()">🗑️ 現在の旅行データを削除</button>
-    <div class="modal-btns"><button type="button" class="btn-cancel" style="width:100%;" onclick="closeModal('modal-project')">閉じる</button></div>
-  </div>
-</div>
-
-<!-- しおりモーダル -->
-<div id="modal-schedule" class="modal">
-  <div class="modal-box">
-    <h3 id="sch-modal-heading">予定の追加</h3>
-コードは注意してご使用ください。
-日にち
-時間
-予定タイトル
-場所・移動手段
-メモ・詳細
-キャンセル
-保存する
-
-
-家族の追加
-家族名（グループ名）
-メンバー構成
-大人人数（精算割り勘用）
-備考（アレルギー・車など）
-キャンセル
-保存する
-
-
-持ち物の追加
-持ち物名
-担当・区分
-キャンセル
-保存する
-
-
-役割分担の追加
-タスク内容
-担当者・家族
-期限・タイミング
-キャンセル
-保存する
-
-
-立て替え支出の記録
-立て替えた家族
-項目名
-金額（円）
-キャンセル
-記録する
-
-
-const STORAGE_KEY = 'famitabi_link_data_v1';
-let appData = {
-currentId: 'proj_1',
-splitMode: 'adult',
-projects: {
-proj_1: {
-name: 'サンプル家族旅行',
-schedules: [
-{ day: '1日目', time: '09:00', title: 'サービスエリア集合', place: '〇〇SA 下り', detail: 'トイレ休憩後に出発' }
-],
-families: [
-{ name: '山田家', members: 'パパ、ママ、息子(6歳)', adults: 2, note: '車出し' },
-{ name: '佐藤家', members: 'パパ、ママ、娘(4歳)', adults: 2, note: '' }
-],
-items: [
-{ name: 'ウェットティッシュ', owner: '各自', checked: false },
-{ name: 'モバイルバッテリー', owner: '山田家', checked: true }
-],
-tasks: [
-{ title: 'レストランのランチ予約', assignee: '佐藤ママ', due: '1週間前', done: false }
-],
-expenses: []
-}
-}
-};
-function loadData() {
-const saved = localStorage.getItem(STORAGE_KEY);
-if (saved) {
-try {
-const parsed = JSON.parse(saved);
-if (parsed && parsed.projects && Object.keys(parsed.projects).length > 0) {
-appData = parsed;
-if (!appData.splitMode) appData.splitMode = 'adult';
-if (!appData.projects[appData.currentId]) {
-appData.currentId = Object.keys(appData.projects)[0];
-}
-}
-} catch (e) {
-console.error('データ読み込みエラー', e);
-}
-}
-}
-function saveData() {
-localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-}
-function getCurrentProject() {
-return appData.projects[appData.currentId];
-}
-// プロジェクト管理・共有
-function renderProjects() {
-const dropdown = document.getElementById('project-dropdown');
-dropdown.innerHTML = '';
-Object.keys(appData.projects).forEach(id => {
-const opt = document.createElement('option');
-opt.value = id;
-opt.textContent = appData.projects[id].name;
-if (id === appData.currentId) opt.selected = true;
-dropdown.appendChild(opt);
-});
-document.getElementById('header-project-title').textContent = '✈️ ' + getCurrentProject().name;
-}
-function switchProject(id) {
-appData.currentId = id;
-saveData();
-renderAll();
-}
-function openProjectModal() {
-document.getElementById('new-proj-name').value = '';
-document.getElementById('import-code-input').value = '';
-document.getElementById('modal-project').classList.add('open');
-}
-function createProject() {
-const name = document.getElementById('new-proj-name').value.trim();
-if (!name) return alert('旅行名を入力してください');
-const newId = 'proj_' + Date.now();
-appData.projects[newId] = {
-name: name,
-schedules: [],
-families: [],
-items: [],
-tasks: [],
-expenses: []
-};
-appData.currentId = newId;
-saveData();
-closeModal('modal-project');
-renderAll();
-}
-function deleteCurrentProject() {
-const keys = Object.keys(appData.projects);
-if (keys.length <= 1) {
-return alert('最後の旅行データは削除できません。先に別の旅行を作成してください。');
-}
-if (!confirm(「${getCurrentProject().name}」を削除しますか？この操作は取り消せません。)) return;
-delete appData.projects[appData.currentId];
-appData.currentId = Object.keys(appData.projects)[0];
-saveData();
-closeModal('modal-project');
-renderAll();
-}
-function exportProjectCode() {
-try {
-const jsonStr = JSON.stringify(getCurrentProject());
-const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
-copyToClipboard(encoded, '共有コードをコピーしました！LINEなどで他の家族に送信してください。');
-} catch (e) {
-alert('共有コードの作成に失敗しました。');
-}
-}
-function importProjectCode() {
-const code = document.getElementById('import-code-input').value.trim();
-if (!code) return alert('共有コードを貼り付けてください。');
-try {
-const jsonStr = decodeURIComponent(escape(atob(code)));
-const imported = JSON.parse(jsonStr);
-if (!imported.name || !Array.isArray(imported.schedules)) {
-throw new Error('Invalid format');
-}
-const newId = 'proj_' + Date.now();
-imported.name = imported.name + ' (共有)';
-appData.projects[newId] = imported;
-appData.currentId = newId;
-saveData();
-closeModal('modal-project');
-renderAll();
-alert(「${imported.name}」を取り込みました！);
-} catch (e) {
-alert('共有コードが正しくありません。文字が途切れていないか確認してください。');
-}
-}
-// タブ切り替え
-function switchTab(tabName) {
-document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
-document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-document.getElementById('tab-' + tabName).style.display = 'block';
-document.getElementById('nav-' + tabName).classList.add('active');
-}
-function closeModal(modalId) {
-document.getElementById(modalId).classList.remove('open');
-}
-// 1. しおり
-function renderSchedules() {
-const list = document.getElementById('schedule-list');
-const schedules = getCurrentProject().schedules;
-if (!schedules.length) {
-list.innerHTML = '予定がまだありません。「＋ 予定追加」から登録しましょう。';
-return;
-}
-const grouped = {};
-schedules.forEach((item, idx) => {
-const d = item.day || '日程未定';
-if (!grouped[d]) grouped[d] = [];
-grouped[d].push({ ...item, idx });
-});
-let html = '';
-Object.keys(grouped).forEach(day => {
-html += <div class="day-section"><div class="day-header">${escapeHtml(day)}</div><div class="timeline-container">;
-grouped[day].forEach(s => {
-html += <div class="card"> <div class="card-actions"> <button class="icon-btn" onclick="openScheduleModal(${s.idx})">編集</button> <button class="icon-btn del" onclick="deleteItem('schedules', ${s.idx})">削除</button> </div> <div class="sch-time">${escapeHtml(s.time)}</div> <div class="sch-title">${escapeHtml(s.title)}</div> ${s.place ?📍 ${escapeHtml(s.place)}: ''} ${s.detail ?${escapeHtml(s.detail)} : ''} </div>;
-});
-html += </div></div>;
-});
-list.innerHTML = html;
-}
-function openScheduleModal(idx) {
-document.getElementById('sch-edit-idx').value = idx;
-if (idx >= 0) {
-const s = getCurrentProject().schedules[idx];
-document.getElementById('sch-modal-heading').textContent = '予定の編集';
-document.getElementById('sch-day').value = s.day;
-document.getElementById('sch-time').value = s.time;
-document.getElementById('sch-title').value = s.title;
-document.getElementById('sch-place').value = s.place;
-document.getElementById('sch-detail').value = s.detail;
-} else {
-document.getElementById('sch-modal-heading').textContent = '予定の追加';
-document.getElementById('sch-day').value = '1日目';
-document.getElementById('sch-time').value = '';
-document.getElementById('sch-title').value = '';
-document.getElementById('sch-place').value = '';
-document.getElementById('sch-detail').value = '';
-}
-document.getElementById('modal-schedule').classList.add('open');
-}
-function saveSchedule() {
-const idx = parseInt(document.getElementById('sch-edit-idx').value, 10);
-const title = document.getElementById('sch-title').value.trim();
-if (!title) return alert('予定タイトルを入力してください');
-const obj = {
-day: document.getElementById('sch-day').value.trim() || '1日目',
-time: document.getElementById('sch-time').value.trim(),
-title: title,
-place: document.getElementById('sch-place').value.trim(),
-detail: document.getElementById('sch-detail').value.trim()
-};
-const list = getCurrentProject().schedules;
-if (idx >= 0) list[idx] = obj;
-else list.push(obj);
-saveData();
-closeModal('modal-schedule');
-renderSchedules();
-}
-function copyScheduleText() {
-const proj = getCurrentProject();
-if (!proj.schedules.length) return alert('共有する予定がありません。');
-let text = ✈️【${proj.name} しおり】\n\n;
-const grouped = {};
-proj.schedules.forEach(s => {
-const d = s.day || '日程未定';
-if (!grouped[d]) grouped[d] = [];
-grouped[d].push(s);
-});
-Object.keys(grouped).forEach(day => {
-text += ■ ${day}\n;
-grouped[day].forEach(s => {
-text += ・${s.time ? s.time + ' ' : ''}${s.title}${s.place ? '（' + s.place + '）' : ''}\n;
-if (s.detail) text +=   └ ${s.detail.replace(/\n/g, ' ')}\n;
-});
-text += \n;
-});
-copyToClipboard(text.trim(), 'しおりのテキストをコピーしました！LINEなどに貼り付けできます。');
-}
-// 2. 参加家族
-function renderFamilies() {
-const list = document.getElementById('family-list');
-const families = getCurrentProject().families;
-if (!families.length) {
-list.innerHTML = '参加家族が登録されていません。';
-return;
-}
-list.innerHTML = families.map((f, idx) => <div class="card"> <div class="card-actions"> <button class="icon-btn" onclick="openFamilyModal(${idx})">編集</button> <button class="icon-btn del" onclick="deleteItem('families', ${idx})">削除</button> </div> <div class="sch-title">${escapeHtml(f.name)} <span style="font-size:12px; color:#0f766e;">(大人${f.adults}名)</span></div> <div class="sch-meta">👥 ${escapeHtml(f.members)}</div> ${f.note ?${escapeHtml(f.note)}: ''} </div>).join('');
-}
-function openFamilyModal(idx) {
-document.getElementById('fam-edit-idx').value = idx;
-if (idx >= 0) {
-const f = getCurrentProject().families[idx];
-document.getElementById('fam-modal-heading').textContent = '家族の編集';
-document.getElementById('fam-name').value = f.name;
-document.getElementById('fam-members').value = f.members;
-document.getElementById('fam-adults').value = f.adults;
-document.getElementById('fam-note').value = f.note;
-} else {
-document.getElementById('fam-modal-heading').textContent = '家族の追加';
-document.getElementById('fam-name').value = '';
-document.getElementById('fam-members').value = '';
-document.getElementById('fam-adults').value = 2;
-document.getElementById('fam-note').value = '';
-}
-document.getElementById('modal-family').classList.add('open');
-}
-function saveFamily() {
-const idx = parseInt(document.getElementById('fam-edit-idx').value, 10);
-const name = document.getElementById('fam-name').value.trim();
-if (!name) return alert('家族名を入力してください');
-const obj = {
-name: name,
-members: document.getElementById('fam-members').value.trim(),
-adults: parseInt(document.getElementById('fam-adults').value, 10) || 1,
-note: document.getElementById('fam-note').value.trim()
-};
-const list = getCurrentProject().families;
-if (idx >= 0) list[idx] = obj;
-else list.push(obj);
-saveData();
-closeModal('modal-family');
-renderFamilies();
-renderExpenses();
-}
-// 3. 持ち物
-function renderItems() {
-const list = document.getElementById('item-list');
-const items = getCurrentProject().items;
-if (!items.length) {
-list.innerHTML = '持ち物リストが空です。';
-return;
-}
-list.innerHTML = items.map((it, idx) => <div class="card" style="display:flex; align-items:center; gap:10px;"> <input type="checkbox" style="width:20px; height:20px; margin:0; flex-shrink:0;" ${it.checked ? 'checked' : ''} onchange="toggleCheck('items', ${idx})"> <div style="flex:1; ${it.checked ? 'text-decoration:line-through; opacity:0.6;' : ''}"> <div style="font-weight:bold; font-size:14px;">${escapeHtml(it.name)}</div> <div style="font-size:11px; color:#64748b;">担当: ${escapeHtml(it.owner || '未定')}</div> </div> <button class="icon-btn del" onclick="deleteItem('items', ${idx})">削除</button> </div>).join('');
-}
-function openItemModal(idx) {
-document.getElementById('item-edit-idx').value = idx;
-document.getElementById('item-name').value = '';
-document.getElementById('item-owner').value = '';
-document.getElementById('modal-item').classList.add('open');
-}
-function saveItem() {
-const name = document.getElementById('item-name').value.trim();
-if (!name) return alert('持ち物名を入力してください');
-getCurrentProject().items.push({
-name: name,
-owner: document.getElementById('item-owner').value.trim() || '全員',
-checked: false
-});
-saveData();
-closeModal('modal-item');
-renderItems();
-}
-// 4. 役割分担
-function renderTasks() {
-const list = document.getElementById('task-list');
-const tasks = getCurrentProject().tasks;
-if (!tasks.length) {
-list.innerHTML = '役割分担がまだ登録されていません。';
-return;
-}
-list.innerHTML = tasks.map((t, idx) => <div class="card" style="display:flex; align-items:center; gap:10px;"> <input type="checkbox" style="width:20px; height:20px; margin:0; flex-shrink:0;" ${t.done ? 'checked' : ''} onchange="toggleCheck('tasks', ${idx})"> <div style="flex:1; ${t.done ? 'text-decoration:line-through; opacity:0.6;' : ''}"> <div style="font-weight:bold; font-size:14px;">${escapeHtml(t.title)}</div> <div style="font-size:11px; color:#0f766e;">担当: ${escapeHtml(t.assignee || '未定')} ${t.due ? ' / 期限: ' + escapeHtml(t.due) : ''}</div> </div> <button class="icon-btn del" onclick="deleteItem('tasks', ${idx})">削除</button> </div>).join('');
-}
-function openTaskModal(idx) {
-document.getElementById('task-title').value = '';
-document.getElementById('task-assignee').value = '';
-document.getElementById('task-due').value = '';
-document.getElementById('modal-task').classList.add('open');
-}
-function saveTask() {
-const title = document.getElementById('task-title').value.trim();
-if (!title) return alert('タスク内容を入力してください');
-getCurrentProject().tasks.push({
-title: title,
-assignee: document.getElementById('task-assignee').value.trim() || '未定',
-due: document.getElementById('task-due').value.trim(),
-done: false
-});
-saveData();
-closeModal('modal-task');
-renderTasks();
-}
-// 5. 精算（大人人数傾斜割り・家族均等割り対応）
-function setSplitMode(mode) {
-appData.splitMode = mode;
-saveData();
-renderExpenses();
-}
-function calculateSettlement() {
-const proj = getCurrentProject();
-const total = proj.expenses.reduce((sum, e) => sum + e.amount, 0);
-const families = proj.families;
-const paidByFam = {};
-families.forEach(f => paidByFam[f.name] = 0);
-proj.expenses.forEach(e => {
-paidByFam[e.payer] = (paidByFam[e.payer] || 0) + e.amount;
-});
-const totalAdults = families.reduce((sum, f) => sum + (f.adults || 1), 0) || 1;
-const famCount = families.length || 1;
-const results = families.map(f => {
-const paid = paidByFam[f.name] || 0;
-const share = appData.splitMode === 'adult'
-? Math.round((total * (f.adults || 1)) / totalAdults)
-: Math.round(total / famCount);
-return {
-name: f.name,
-adults: f.adults || 1,
-paid: paid,
-share: share,
-diff: paid - share
-};
-});
-return { total, totalAdults, famCount, results };
-}
-function renderExpenses() {
-document.getElementById('mode-adult').classList.toggle('active', appData.splitMode === 'adult');
-document.getElementById('mode-family').classList.toggle('active', appData.splitMode === 'family');
-const proj = getCurrentProject();
-const summaryEl = document.getElementById('expense-summary');
-const listEl = document.getElementById('expense-list');
-if (!proj.expenses.length) {
-summaryEl.innerHTML = '';
-listEl.innerHTML = '立て替え記録はまだありません。';
-return;
-}
-const { total, totalAdults, results } = calculateSettlement();
-const modeLabel = appData.splitMode === 'adult'
-? 大人1人あたり約 <b>${Math.round(total / totalAdults).toLocaleString()}円</b>
-: 1家族あたり約 <b>${Math.round(total / (proj.families.length || 1)).toLocaleString()}円</b>;
-let summaryHtml = <div class="card" style="background:#f0fdfa; border-color:#99f6e4;"> <div style="font-size:13px; color:#0f766e; font-weight:bold; margin-bottom:6px;">💰 精算サマリー</div> <div style="font-size:14px; margin-bottom:8px;">合計支出: <b>${total.toLocaleString()}円</b>（${modeLabel}）</div> <div style="font-size:12px; border-top:1px solid #ccfbf1; padding-top:6px;">;
-results.forEach(r => {
-const status = r.diff > 0
-? <span style="color:#0d9488; font-weight:bold;">+${r.diff.toLocaleString()}円 受取</span>
-: r.diff < 0
-? <span style="color:#ef4444; font-weight:bold;">${r.diff.toLocaleString()}円 支払</span>
-: <span>±0円</span>;
-summaryHtml +=  <div style="display:flex; justify-content:space-between; margin-bottom:4px;"> <span>${escapeHtml(r.name)} <small style="color:#64748b;">(立替:${r.paid.toLocaleString()}円 / 負担:${r.share.toLocaleString()}円)</small></span> <span>${status}</span> </div>;
-});
-summaryHtml += </div></div>;
-summaryEl.innerHTML = summaryHtml;
-listEl.innerHTML = proj.expenses.map((e, idx) => <div class="card"> <div class="card-actions"> <button class="icon-btn del" onclick="deleteItem('expenses', ${idx})">削除</button> </div> <div style="font-size:11px; color:#0f766e; font-weight:bold;">立替: ${escapeHtml(e.payer)}</div> <div style="font-size:15px; font-weight:bold;">${escapeHtml(e.title)}</div> <div style="font-size:14px; color:#1e293b; margin-top:2px;">${e.amount.toLocaleString()} 円</div> </div>).join('');
-}
-function copyExpenseText() {
-const proj = getCurrentProject();
-if (!proj.expenses.length) return alert('共有する精算データがありません。');
-const { total, results } = calculateSettlement();
-const method = appData.splitMode === 'adult' ? '大人人数割り' : '家族数均等割り';
-let text = 💴【${proj.name} 精算まとめ】\n;
-text += 合計: ${total.toLocaleString()}円（${method}）\n\n;
-results.forEach(r => {
-const diffStr = r.diff > 0 ? +${r.diff.toLocaleString()}円 受取 : r.diff < 0 ? ${r.diff.toLocaleString()}円 支払 : ±0円;
-text += ■ ${r.name}：${diffStr}\n（立替 ${r.paid.toLocaleString()}円 / 負担 ${r.share.toLocaleString()}円）\n;
-});
-text += \n【内訳】\n;
-proj.expenses.forEach(e => {
-text += ・${e.title}: ${e.amount.toLocaleString()}円（${e.payer}立替）\n;
-});
-copyToClipboard(text.trim(), '精算結果をコピーしました！LINEなどに貼り付けできます。');
-}
-function openExpenseModal() {
-const families = getCurrentProject().families;
-if (!families.length) {
-return alert('先に「家族」タブから参加家族を1つ以上登録してください。');
-}
-const select = document.getElementById('exp-payer');
-select.innerHTML = families.map(f => <option value="${escapeHtml(f.name)}">${escapeHtml(f.name)}</option>).join('');
-document.getElementById('exp-title').value = '';
-document.getElementById('exp-amount').value = '';
-document.getElementById('modal-expense').classList.add('open');
-}
-function saveExpense() {
-const title = document.getElementById('exp-title').value.trim();
-const amount = parseInt(document.getElementById('exp-amount').value, 10);
-if (!title || isNaN(amount) || amount <= 0) return alert('項目名と正しい金額を入力してください');
-getCurrentProject().expenses.push({
-payer: document.getElementById('exp-payer').value,
-title: title,
-amount: amount
-});
-saveData();
-closeModal('modal-expense');
-renderExpenses();
-}
-// 共通ヘルパー
-function copyToClipboard(text, successMsg) {
-if (navigator.clipboard && navigator.clipboard.writeText) {
-navigator.clipboard.writeText(text).then(() => alert(successMsg)).catch(() => fallbackCopy(text, successMsg));
-} else {
-fallbackCopy(text, successMsg);
-}
-}
-function fallbackCopy(text, successMsg) {
-const ta = document.createElement('textarea');
-ta.value = text;
-document.body.appendChild(ta);
-ta.select();
-document.execCommand('copy');
-document.body.removeChild(ta);
-alert(successMsg);
-}
-function toggleCheck(key, idx) {
-const item = getCurrentProject()[key][idx];
-if (key === 'items') item.checked = !item.checked;
-if (key === 'tasks') item.done = !item.done;
-saveData();
-renderAll();
-}
-function deleteItem(key, idx) {
-if (!confirm('削除してもよろしいですか？')) return;
-getCurrentProject()[key].splice(idx, 1);
-saveData();
-renderAll();
-}
-function escapeHtml(str) {
-if (!str) return '';
-return String(str)
-.replace(/&/g, '&')
-.replace(/</g, '<')
-.replace(/>/g, '>')
-.replace(/"/g, '"')
-.replace(/'/g, ''');
-}
-function renderAll() {
-renderProjects();
-renderSchedules();
-renderFamilies();
-renderItems();
-renderTasks();
-renderExpenses();
-}
-// 初期化
-loadData();
-renderAll();
+  loadFiles();
+  loadText();
+</script>
+</body>
+</html>
+"""
+
+shared_clipboard_text = ""
+
+class CustomHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        global shared_clipboard_text
+        if self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_PAGE.encode("utf-8"))
+        elif self.path == "/api/files":
+            files = os.listdir(UPLOAD_DIR)
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(files).encode("utf-8"))
+        elif self.path == "/api/text":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"text": shared_clipboard_text}).encode("utf-8"))
+        elif self.path.startswith("/download/"):
+            filename = urllib.parse.unquote(self.path[len("/download/"):])
+            filepath = os.path.join(UPLOAD_DIR, os.path.basename(filename))
+            if os.path.exists(filepath):
+                self.send_response(200)
+                self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+                self.end_headers()
+                with open(filepath, "rb") as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_error(404)
+        else:
+            self.send_error(404)
+
+    def do_POST(self):
+        global shared_clipboard_text
+        if self.path == "/api/upload":
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={'REQUEST_METHOD': 'POST', 'CONTENT_TYPE': self.headers['Content-Type']}
+            )
+            file_items = form['files'] if isinstance(form['files'], list) else [form['files']]
+            for item in file_items:
+                if item.filename:
+                    filepath = os.path.join(UPLOAD_DIR, os.path.basename(item.filename))
+                    with open(filepath, "wb") as f:
+                        f.write(item.file.read())
+            self.send_response(200)
+            self.end_headers()
+        elif self.path == "/api/text":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode("utf-8"))
+            shared_clipboard_text = data.get("text", "")
+            self.send_response(200)
+            self.end_headers()
+
+if __name__ == "__main__":
+    local_ip = get_local_ip()
+    print("=" * 50)
+    print(f"サーバー起動中！同じWi-FiのAndroidブラウザで以下にアクセス：")
+    print(f"👉 http://{local_ip}:{PORT}")
+    print("=" * 50)
+    with socketserver.ThreadingTCPServer(("", PORT), CustomHandler) as httpd:
+        httpd.serve_forever()
