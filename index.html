@@ -1,184 +1,655 @@
-import http.server
-import socketserver
-import socket
-import os
-import urllib.parse
-import json
-import cgi
-
-PORT = 8080
-UPLOAD_DIR = "shared_files"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# 自分のローカルIPアドレスを取得する関数
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-    except Exception:
-        ip = "127.0.0.1"
-    finally:
-        s.close()
-    return ip
-
-# ブラウザに表示するHTMLアプリ（UI）
-HTML_PAGE = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Local File & Text Share</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ファミ旅リンク</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d9488">
 <style>
-  body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 0 15px; background: #f4f6f9; color: #333; }
-  h1 { font-size: 1.4rem; color: #1a73e8; text-align: center; }
-  .card { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
-  .btn { background: #1a73e8; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; margin-top: 10px; }
-  .btn:hover { background: #1557b0; }
-  textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 6px; padding: 8px; box-sizing: border-box; font-size: 1rem; }
-  ul { list-style: none; padding: 0; }
-  li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-  a { text-decoration: none; color: #1a73e8; font-weight: bold; word-break: break-all; }
-  .status { text-align: center; color: green; font-size: 0.9rem; margin-top: 8px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: #f1f5f9; color: #1e293b; padding-bottom: 85px; }
+  header { background: #0f766e; color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+  header h1 { font-size: 17px; font-weight: 700; }
+  main { padding: 16px; max-width: 500px; margin: 0 auto; }
+  
+  .project-bar { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 10px 16px; display: flex; gap: 8px; align-items: center; overflow-x: auto; }
+  .project-select { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; font-weight: bold; color: #0f766e; }
+
+  .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .header-row h2 { font-size: 17px; color: #0f172a; font-weight: 700; }
+  .btn-primary { background: #0d9488; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  .btn-primary:active { opacity: 0.85; }
+  
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .empty-card { text-align: center; padding: 32px 16px; border: 2px dashed #cbd5e1; color: #64748b; border-radius: 12px; background: #fff; font-size: 13px; }
+  
+  .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+  .icon-btn { background: #f1f5f9; border: none; padding: 5px 8px; border-radius: 6px; font-size: 12px; color: #475569; cursor: pointer; font-weight: 600; }
+  .icon-btn.del { color: #ef4444; background: #fef2f2; }
+
+  .day-section { margin-bottom: 20px; }
+  .day-header { background: #0f766e; color: #fff; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+  .timeline-container { border-left: 3px solid #99f6e4; margin-left: 10px; padding-left: 16px; }
+  .sch-time { font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 2px; }
+  .sch-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; padding-right: 75px; }
+  .sch-meta { font-size: 12px; color: #475569; margin-bottom: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .sch-detail { font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 8px; border-radius: 6px; margin-top: 4px; white-space: pre-wrap; border-left: 2px solid #cbd5e1; }
+
+  label.field-label { display: block; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 3px; }
+  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #0d9488; }
+  
+  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 20; box-shadow: 0 -2px 6px rgba(0,0,0,0.04); }
+  nav button { background: none; border: none; color: #64748b; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; width: 20%; }
+  nav button.active { color: #0d9488; font-weight: bold; }
+  nav button span.icon { font-size: 16px; }
+  
+  .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 50; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+  .modal.open { display: flex; }
+  .modal-box { background: #fff; width: 100%; max-width: 380px; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin: auto; max-height: 90vh; overflow-y: auto; }
+  .modal-box h3 { margin-bottom: 12px; font-size: 16px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 4px; }
+  .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
+  .btn-cancel { background: #f1f5f9; color: #475569; }
 </style>
 </head>
 <body>
-  <h1>📱↔️💻 ローカル共有アプリ</h1>
 
-  <div class="card">
-    <h3>📤 ファイル送信（アップロード）</h3>
-    <input type="file" id="fileInput" multiple style="width: 100%;">
-    <button class="btn" onclick="uploadFiles()">選択したファイルを送信</button>
-    <div id="uploadStatus" class="status"></div>
+<header>
+  <h1 id="header-project-title">✈️ ファミ旅リンク</h1>
+  <button type="button" onclick="openProjectModal()" style="background:#115e59; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">旅行切替・作成</button>
+</header>
+
+<div class="project-bar">
+  <span style="font-size:12px; font-weight:bold; color:#475569; white-space:nowrap;">現在の旅行:</span>
+  <select id="project-dropdown" class="project-select" onchange="switchProject(this.value)"></select>
+</div>
+
+<main>
+  <!-- 1. タイムライン（しおり） -->
+  <div id="tab-timeline" class="tab-view">
+    <div class="header-row">
+      <h2>📅 旅のしおり</h2>
+      <button type="button" class="btn-primary" onclick="openScheduleModal(-1)">＋ 予定追加</button>
+    </div>
+    <div id="schedule-list"></div>
   </div>
 
-  <div class="card">
-    <h3>📋 クリップボード・メモ共有</h3>
-    <textarea id="sharedText" placeholder="ここにURLやテキストを入力して送信すると、もう片方の端末でコピーできます"></textarea>
-    <button class="btn" onclick="sendText()">テキストを更新</button>
-    <button class="btn" style="background:#5f6368;" onclick="loadText()">最新テキストを取得</button>
+  <!-- 2. 参加家族 -->
+  <div id="tab-families" class="tab-view" style="display:none;">
+    <div class="header-row">
+      <h2>👨‍👩‍👧‍👦 参加家族</h2>
+      <button type="button" class="btn-primary" onclick="openFamilyModal(-1)">＋ 家族追加</button>
+    </div>
+    <div id="family-list"></div>
   </div>
 
-  <div class="card">
-    <h3>📁 共有フォルダ内のファイル一覧</h3>
-    <ul id="fileList"></ul>
+  <!-- 3. 持ち物 -->
+  <div id="tab-items" class="tab-view" style="display:none;">
+    <div class="header-row">
+      <h2>🎒 持ち物リスト</h2>
+      <button type="button" class="btn-primary" onclick="openItemModal(-1)">＋ 持ち物追加</button>
+    </div>
+    <div id="item-list"></div>
   </div>
+
+  <!-- 4. 役割分担 -->
+  <div id="tab-tasks" class="tab-view" style="display:none;">
+    <div class="header-row">
+      <h2>📝 役割分担</h2>
+      <button type="button" class="btn-primary" onclick="openTaskModal(-1)">＋ 分担追加</button>
+    </div>
+    <div id="task-list"></div>
+  </div>
+
+  <!-- 5. 精算 -->
+  <div id="tab-money" class="tab-view" style="display:none;">
+    <div class="header-row">
+      <h2>💴 立て替え・精算</h2>
+      <button type="button" class="btn-primary" onclick="openExpenseModal()">＋ 支出記録</button>
+    </div>
+    <div id="expense-summary"></div>
+    <div id="expense-list"></div>
+  </div>
+</main>
+
+<nav>
+  <button type="button" id="nav-timeline" class="active" onclick="switchTab('timeline')"><span class="icon">📅</span>しおり</button>
+  <button type="button" id="nav-families" onclick="switchTab('families')"><span class="icon">👨‍👩‍👧‍👦</span>家族</button>
+  <button type="button" id="nav-items" onclick="switchTab('items')"><span class="icon">🎒</span>持ち物</button>
+  <button type="button" id="nav-tasks" onclick="switchTab('tasks')"><span class="icon">📝</span>分担</button>
+  <button type="button" id="nav-money" onclick="switchTab('money')"><span class="icon">💴</span>精算</button>
+</nav>
+
+<!-- モーダル各種 -->
+<div id="modal-project" class="modal">
+  <div class="modal-box">
+    <h3>旅行プロジェクトの管理</h3>
+    <label class="field-label">新しい旅行名を入力</label>
+    <input type="text" id="new-proj-name" placeholder="例: 冬の温泉旅行">
+    <div style="margin-bottom:14px;"><button type="button" class="btn-primary" style="width:100%;" onclick="createProject()">＋ 新しい旅行を作成して切り替える</button></div>
+    <div class="modal-btns"><button type="button" class="btn-cancel" style="width:100%;" onclick="closeModal('modal-project')">閉じる</button></div>
+  </div>
+</div>
+
+<div id="modal-schedule" class="modal">
+  <div class="modal-box">
+    <h3 id="sch-modal-heading">予定の追加</h3>
+    <input type="hidden" id="sch-edit-idx" value="-1">
+    <label class="field-label">日にち</label>
+    <input type="text" id="sch-day" placeholder="例: 1日目 (11/20)">
+    <label class="field-label">時間</label>
+    <input type="text" id="sch-time" placeholder="例: 10:00 〜 11:30">
+    <label class="field-label">タイトル（必須）</label>
+    <input type="text" id="sch-title" placeholder="例: 水族館到着">
+    <label class="field-label">場所</label>
+    <input type="text" id="sch-loc" placeholder="例: 駐車場P2集合">
+    <label class="field-label">担当・関係者</label>
+    <select id="sch-family"></select>
+    <label class="field-label">詳細メモ</label>
+    <textarea id="sch-detail" rows="2" placeholder="チケット購入済み等"></textarea>
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-schedule')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveSchedule()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-family" class="modal">
+  <div class="modal-box">
+    <h3 id="fam-modal-heading">家族の追加</h3>
+    <input type="hidden" id="fam-edit-idx" value="-1">
+    <label class="field-label">家族名・グループ名（必須）</label>
+    <input type="text" id="fam-name" placeholder="例: 佐藤家">
+    <div style="display:flex; gap:8px;">
+      <div style="flex:1;"><label class="field-label">大人</label><input type="number" id="fam-adults" min="0" value="2"></div>
+      <div style="flex:1;"><label class="field-label">子供</label><input type="number" id="fam-kids" min="0" value="0"></div>
+    </div>
+    <label class="field-label">メモ</label>
+    <input type="text" id="fam-note" placeholder="車出し担当など">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-family')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveFamily()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-item" class="modal">
+  <div class="modal-box">
+    <h3 id="item-modal-heading">持ち物の追加</h3>
+    <input type="hidden" id="item-edit-idx" value="-1">
+    <label class="field-label">持ち物名（必須）</label>
+    <input type="text" id="item-name" placeholder="例: レジャーシート">
+    <label class="field-label">担当</label>
+    <select id="item-family"></select>
+    <label class="field-label">備考</label>
+    <input type="text" id="item-note" placeholder="大きめのやつ">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-item')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveItem()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-task" class="modal">
+  <div class="modal-box">
+    <h3 id="task-modal-heading">役割分担の追加</h3>
+    <input type="hidden" id="task-edit-idx" value="-1">
+    <label class="field-label">担当者</label>
+    <select id="task-family"></select>
+    <label class="field-label">やるべきこと・担当内容（必須）</label>
+    <textarea id="task-content" rows="2" placeholder="例: レストランの予約"></textarea>
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-task')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveTask()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-expense" class="modal">
+  <div class="modal-box">
+    <h3>立て替え支出の記録</h3>
+    <label class="field-label">立て替えた家族</label>
+    <select id="exp-payer" style="margin-bottom:10px;"></select>
+    <label class="field-label">項目</label>
+    <input type="text" id="exp-title" placeholder="例: 高速代">
+    <label class="field-label">金額（円）</label>
+    <input type="number" id="exp-amount" placeholder="4500">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-expense')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="addExpense()">記録する</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  async function loadFiles() {
-    const res = await fetch('/api/files');
-    const files = await res.json();
-    const list = document.getElementById('fileList');
-    list.innerHTML = files.length ? '' : '<li>ファイルはありません</li>';
-    files.forEach(file => {
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="/download/${encodeURIComponent(file)}" download>${file}</a>`;
-      list.appendChild(li);
-    });
-  }
-
-  async function uploadFiles() {
-    const input = document.getElementById('fileInput');
-    if (!input.files.length) return alert('ファイルを選択してください');
-    const status = document.getElementById('uploadStatus');
-    status.textContent = '送信中...';
-    const formData = new FormData();
-    for (const file of input.files) {
-      formData.append('files', file);
+  let appData = {
+    currentId: 'proj_1',
+    projects: {
+      'proj_1': {
+        title: 'みんなの家族旅行',
+        families: [{ name: '我が家', adults: 2, kids: 1, note: '' }],
+        schedules: [],
+        items: [],
+        tasks: [],
+        expenses: []
+      }
     }
-    await fetch('/api/upload', { method: 'POST', body: formData });
-    input.value = '';
-    status.textContent = '送信完了！';
-    loadFiles();
+  };
+
+  try {
+    const saved = localStorage.getItem('famitabi_v5');
+    if (saved) appData = JSON.parse(saved);
+  } catch (e) {}
+
+  function getCurr() {
+    if (!appData.projects[appData.currentId]) {
+      const keys = Object.keys(appData.projects);
+      appData.currentId = keys.length > 0 ? keys[0] : 'proj_1';
+    }
+    return appData.projects[appData.currentId];
   }
 
-  async function sendText() {
-    const text = document.getElementById('sharedText').value;
-    await fetch('/api/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+  function saveOnly() {
+    try { localStorage.setItem('famitabi_v5', JSON.stringify(appData)); } catch (e) {}
+  }
+
+  function saveAndRender() {
+    saveOnly();
+    render();
+  }
+
+  function switchTab(name) {
+    ['timeline', 'families', 'items', 'tasks', 'money'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = (t === name) ? 'block' : 'none';
+      document.getElementById('nav-' + t).className = (t === name) ? 'active' : '';
     });
-    alert('テキストを共有しました');
+    window.scrollTo(0, 0);
   }
 
-  async function loadText() {
-    const res = await fetch('/api/text');
-    const data = await res.json();
-    document.getElementById('sharedText').value = data.text;
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  function openProjectModal() { openModal('modal-project'); }
+  function switchProject(id) {
+    appData.currentId = id;
+    saveOnly();
+    render();
+  }
+  function createProject() {
+    const name = document.getElementById('new-proj-name').value.trim();
+    if (!name) return alert('旅行名を入力してください');
+    const newId = 'proj_' + Date.now();
+    appData.projects[newId] = {
+      title: name,
+      families: [{ name: '我が家', adults: 2, kids: 1, note: '' }],
+      schedules: [],
+      items: [],
+      tasks: [],
+      expenses: []
+    };
+    appData.currentId = newId;
+    document.getElementById('new-proj-name').value = '';
+    closeModal('modal-project');
+    saveAndRender();
   }
 
-  loadFiles();
-  loadText();
+  function updateFamilySelect(elementId, selectedVal = '') {
+    const curr = getCurr();
+    const sel = document.getElementById(elementId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- 指定なし / 全員 --</option>' +
+      curr.families.map(f => `<option value="${f.name}" ${f.name===selectedVal?'selected':''}>${f.name}</option>`).join('');
+  }
+
+  // --- 予定（しおり） ---
+  function openScheduleModal(idx) {
+    document.getElementById('sch-edit-idx').value = idx;
+    updateFamilySelect('sch-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('sch-modal-heading').textContent = '予定の編集';
+      const s = curr.schedules[idx];
+      document.getElementById('sch-day').value = s.day || '';
+      document.getElementById('sch-time').value = s.time || '';
+      document.getElementById('sch-title').value = s.title || '';
+      document.getElementById('sch-loc').value = s.loc || '';
+      document.getElementById('sch-family').value = s.family || '';
+      document.getElementById('sch-detail').value = s.detail || '';
+    } else {
+      document.getElementById('sch-modal-heading').textContent = '予定の追加';
+      const lastDay = curr.schedules.length > 0 ? (curr.schedules[curr.schedules.length - 1].day || '1日目') : '1日目';
+      document.getElementById('sch-day').value = lastDay;
+      document.getElementById('sch-time').value = '';
+      document.getElementById('sch-title').value = '';
+      document.getElementById('sch-loc').value = '';
+      document.getElementById('sch-detail').value = '';
+    }
+    openModal('modal-schedule');
+  }
+
+  function saveSchedule() {
+    const title = document.getElementById('sch-title').value.trim();
+    if (!title) return alert('予定タイトルを入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('sch-edit-idx').value);
+    const item = {
+      day: document.getElementById('sch-day').value.trim() || '日程未定',
+      time: document.getElementById('sch-time').value.trim(),
+      title: title,
+      loc: document.getElementById('sch-loc').value.trim(),
+      family: document.getElementById('sch-family').value,
+      detail: document.getElementById('sch-detail').value.trim()
+    };
+    if (idx >= 0) curr.schedules[idx] = item;
+    else curr.schedules.push(item);
+    closeModal('modal-schedule');
+    saveAndRender();
+  }
+
+  function deleteSchedule(idx) {
+    if (confirm('この予定を削除しますか？')) {
+      const curr = getCurr();
+      curr.schedules.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
+  // --- 家族管理 ---
+  function openFamilyModal(idx) {
+    document.getElementById('fam-edit-idx').value = idx;
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('fam-modal-heading').textContent = '家族情報の編集';
+      const f = curr.families[idx];
+      document.getElementById('fam-name').value = f.name || '';
+      document.getElementById('fam-adults').value = f.adults ?? 2;
+      document.getElementById('fam-kids').value = f.kids ?? 0;
+      document.getElementById('fam-note').value = f.note || '';
+    } else {
+      document.getElementById('fam-modal-heading').textContent = '家族の追加';
+      document.getElementById('fam-name').value = '';
+      document.getElementById('fam-adults').value = 2;
+      document.getElementById('fam-kids').value = 1;
+      document.getElementById('fam-note').value = '';
+    }
+    openModal('modal-family');
+  }
+
+  function saveFamily() {
+    const name = document.getElementById('fam-name').value.trim();
+    if (!name) return alert('家族名を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('fam-edit-idx').value);
+    const item = {
+      name: name,
+      adults: Number(document.getElementById('fam-adults').value) || 0,
+      kids: Number(document.getElementById('fam-kids').value) || 0,
+      note: document.getElementById('fam-note').value.trim()
+    };
+    if (idx >= 0) curr.families[idx] = item;
+    else curr.families.push(item);
+    closeModal('modal-family');
+    saveAndRender();
+  }
+
+  function deleteFamily(idx) {
+    if (confirm('この家族を削除しますか？')) {
+      const curr = getCurr();
+      curr.families.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
+  // --- 持ち物管理 ---
+  function openItemModal(idx) {
+    document.getElementById('item-edit-idx').value = idx;
+    updateFamilySelect('item-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('item-modal-heading').textContent = '持ち物の編集';
+      const it = curr.items[idx];
+      document.getElementById('item-name').value = it.name || '';
+      document.getElementById('item-family').value = it.family || '';
+      document.getElementById('item-note').value = it.note || '';
+    } else {
+      document.getElementById('item-modal-heading').textContent = '持ち物の追加';
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-note').value = '';
+    }
+    openModal('modal-item');
+  }
+
+  function saveItem() {
+    const name = document.getElementById('item-name').value.trim();
+    if (!name) return alert('持ち物名を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('item-edit-idx').value);
+    const item = {
+      name: name,
+      family: document.getElementById('item-family').value,
+      note: document.getElementById('item-note').value.trim(),
+      done: idx >= 0 ? curr.items[idx].done : false
+    };
+    if (idx >= 0) curr.items[idx] = item;
+    else curr.items.push(item);
+    closeModal('modal-item');
+    saveAndRender();
+  }
+
+  function deleteItem(idx) {
+    const curr = getCurr();
+    curr.items.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 役割分担管理 ---
+  function openTaskModal(idx) {
+    document.getElementById('task-edit-idx').value = idx;
+    updateFamilySelect('task-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('task-modal-heading').textContent = '役割分担の編集';
+      const t = curr.tasks[idx];
+      document.getElementById('task-family').value = t.family || '';
+      document.getElementById('task-content').value = t.content || '';
+    } else {
+      document.getElementById('task-modal-heading').textContent = '役割分担の追加';
+      document.getElementById('task-content').value = '';
+    }
+    openModal('modal-task');
+  }
+
+  function saveTask() {
+    const content = document.getElementById('task-content').value.trim();
+    if (!content) return alert('分担内容を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('task-edit-idx').value);
+    const item = {
+      family: document.getElementById('task-family').value || '未割当',
+      content: content
+    };
+    if (idx >= 0) curr.tasks[idx] = item;
+    else curr.tasks.push(item);
+    closeModal('modal-task');
+    saveAndRender();
+  }
+
+  function deleteTask(idx) {
+    const curr = getCurr();
+    curr.tasks.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 精算管理 ---
+  function openExpenseModal() {
+    updateFamilySelect('exp-payer');
+    document.getElementById('exp-title').value = '';
+    document.getElementById('exp-amount').value = '';
+    openModal('modal-expense');
+  }
+
+  function addExpense() {
+    const title = document.getElementById('exp-title').value.trim();
+    const amount = document.getElementById('exp-amount').value;
+    if (!title || !amount) return alert('項目と金額を入力してください');
+    const curr = getCurr();
+    curr.expenses.push({
+      payer: document.getElementById('exp-payer').value || '誰か',
+      title: title,
+      amount: Number(amount)
+    });
+    closeModal('modal-expense');
+    saveAndRender();
+  }
+
+  function deleteExpense(idx) {
+    const curr = getCurr();
+    curr.expenses.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 画面描画 ---
+  function render() {
+    const curr = getCurr();
+    
+    document.getElementById('header-project-title').textContent = '✈️ ' + curr.title;
+    const projSel = document.getElementById('project-dropdown');
+    projSel.innerHTML = Object.keys(appData.projects).map(id => 
+      `<option value="${id}" ${id===appData.currentId?'selected':''}>${appData.projects[id].title}</option>`
+    ).join('');
+
+    // 1. タイムライン
+    const schEl = document.getElementById('schedule-list');
+    if (curr.schedules.length === 0) {
+      schEl.innerHTML = '<div class="empty-card">予定がありません<br><small>「＋ 予定追加」からタイムラインを作成しましょう</small></div>';
+    } else {
+      const groups = {};
+      const dayOrder = [];
+      curr.schedules.forEach((s, originalIdx) => {
+        const d = s.day || '日程未定';
+        if (!groups[d]) { groups[d] = []; dayOrder.push(d); }
+        groups[d].push({ ...s, originalIdx });
+      });
+
+      schEl.innerHTML = dayOrder.map(day => `
+        <div class="day-section">
+          <div class="day-header">📅 ${day}</div>
+          <div class="timeline-container">
+            ${groups[day].map(s => `
+              <div class="card">
+                <div class="card-actions">
+                  <button type="button" class="icon-btn" onclick="openScheduleModal(${s.originalIdx})">編集</button>
+                  <button type="button" class="icon-btn del" onclick="deleteSchedule(${s.originalIdx})">削除</button>
+                </div>
+                <div class="sch-time">🕒 ${s.time || '時間未定'}</div>
+                <div class="sch-title">${s.title}</div>
+                <div class="sch-meta">
+                  ${s.loc ? `<span>📍 ${s.loc}</span>` : ''}
+                  ${s.family ? `<span style="background:#ccfbf1; color:#115e59; padding:1px 6px; border-radius:4px; font-weight:bold;">👤 ${s.family}</span>` : ''}
+                </div>
+                ${s.detail ? `<div class="sch-detail">${s.detail}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. 家族
+    const famEl = document.getElementById('family-list');
+    if (curr.families.length === 0) {
+      famEl.innerHTML = '<div class="empty-card">家族が登録されていません</div>';
+    } else {
+      famEl.innerHTML = curr.families.map((f, i) => `
+        <div class="card">
+          <div class="card-actions">
+            <button type="button" class="icon-btn" onclick="openFamilyModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteFamily(${i})">削除</button>
+          </div>
+          <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${f.name}</div>
+          <div style="font-size:12px; color:#0f766e; font-weight:600;">大人 ${f.adults}名 ・ 子供 ${f.kids}名</div>
+          ${f.note ? `<div style="font-size:11px; color:#64748b; margin-top:2px;">${f.note}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // 3. 持ち物
+    const itemEl = document.getElementById('item-list');
+    if (curr.items.length === 0) {
+      itemEl.innerHTML = '<div class="empty-card">持ち物が登録されていません</div>';
+    } else {
+      itemEl.innerHTML = curr.items.map((it, i) => `
+        <div class="card" style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" ${it.checked ? 'checked' : ''} onclick="curr.items[${i}].checked = !curr.items[${i}].checked; saveOnly();" style="width:20px; height:20px; accent-color:#0d9488;">
+          <div style="flex:1;">
+            <div style="font-weight:bold; font-size:14px; text-decoration:${it.checked?'line-through':''}; color:${it.checked?'#94a3b8':'#1e293b'}">${it.name}</div>
+            <div style="font-size:11px; color:#64748b;">担当: <b>${it.family || '指定なし'}</b> ${it.note ? ' / ' + it.note : ''}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="icon-btn" onclick="openItemModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteItem(${i})">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 4. 役割分担
+    const taskEl = document.getElementById('task-list');
+    if (curr.tasks.length === 0) {
+      taskEl.innerHTML = '<div class="empty-card">役割分担が登録されていません</div>';
+    } else {
+      taskEl.innerHTML = curr.tasks.map((t, i) => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:11px; background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold;">👤 ${t.family}</span>
+            <div style="font-weight:bold; font-size:14px; margin-top:4px;">${t.content}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="icon-btn" onclick="openTaskModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteTask(${i})">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 5. 精算
+    const expSumEl = document.getElementById('expense-summary');
+    const expEl = document.getElementById('expense-list');
+    const totalAmount = curr.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const famCount = (curr.families && curr.families.length > 0) ? curr.families.length : 1;
+
+    if (curr.expenses.length === 0) {
+      expSumEl.innerHTML = '';
+      expEl.innerHTML = '<div class="empty-card">立て替え記録はありません</div>';
+    } else {
+      expSumEl.innerHTML = `
+        <div class="card" style="background:#f0fdfa; border-color:#99f6e4; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:11px; color:#0f766e; font-weight:bold;">立て替え合計（${famCount}家族割）</div>
+            <div style="font-size:11px; color:#475569;">1家族あたり約 <b>¥${Math.round(totalAmount / famCount).toLocaleString()}</b></div>
+          </div>
+          <div style="font-size:18px; font-weight:bold; color:#0f766e;">¥${totalAmount.toLocaleString()}</div>
+        </div>
+      `;
+      expEl.innerHTML = curr.expenses.map((e, i) => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:11px; background:#ccfbf1; color:#115e59; padding:2px 6px; border-radius:4px; font-weight:bold;">${e.payer}支払い</span>
+            <div style="font-weight:bold; margin-top:3px; font-size:14px;">${e.title}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-weight:bold; color:#0f766e; font-size:15px;">¥${e.amount.toLocaleString()}</span>
+            <button type="button" class="icon-btn del" onclick="deleteExpense(${i})">削除ボタン</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  render();
 </script>
 </body>
 </html>
-"""
-
-shared_clipboard_text = ""
-
-class CustomHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        global shared_clipboard_text
-        if self.path == "/":
-            self.send_response(200)
-            self.send_header("Content-type", "text/html; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(HTML_PAGE.encode("utf-8"))
-        elif self.path == "/api/files":
-            files = os.listdir(UPLOAD_DIR)
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(files).encode("utf-8"))
-        elif self.path == "/api/text":
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"text": shared_clipboard_text}).encode("utf-8"))
-        elif self.path.startswith("/download/"):
-            filename = urllib.parse.unquote(self.path[len("/download/"):])
-            filepath = os.path.join(UPLOAD_DIR, os.path.basename(filename))
-            if os.path.exists(filepath):
-                self.send_response(200)
-                self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
-                self.end_headers()
-                with open(filepath, "rb") as f:
-                    self.wfile.write(f.read())
-            else:
-                self.send_error(404)
-        else:
-            self.send_error(404)
-
-    def do_POST(self):
-        global shared_clipboard_text
-        if self.path == "/api/upload":
-            form = cgi.FieldStorage(
-                fp=self.rfile,
-                headers=self.headers,
-                environ={'REQUEST_METHOD': 'POST', 'CONTENT_TYPE': self.headers['Content-Type']}
-            )
-            file_items = form['files'] if isinstance(form['files'], list) else [form['files']]
-            for item in file_items:
-                if item.filename:
-                    filepath = os.path.join(UPLOAD_DIR, os.path.basename(item.filename))
-                    with open(filepath, "wb") as f:
-                        f.write(item.file.read())
-            self.send_response(200)
-            self.end_headers()
-        elif self.path == "/api/text":
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode("utf-8"))
-            shared_clipboard_text = data.get("text", "")
-            self.send_response(200)
-            self.end_headers()
-
-if __name__ == "__main__":
-    local_ip = get_local_ip()
-    print("=" * 50)
-    print(f"サーバー起動中！同じWi-FiのAndroidブラウザで以下にアクセス：")
-    print(f"👉 http://{local_ip}:{PORT}")
-    print("=" * 50)
-    with socketserver.ThreadingTCPServer(("", PORT), CustomHandler) as httpd:
-        httpd.serve_forever()
