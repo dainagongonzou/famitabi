@@ -21,7 +21,6 @@
   .header-row h2 { font-size: 17px; color: #0f172a; font-weight: 700; }
   .btn-primary { background: #0d9488; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
   .btn-primary:active { opacity: 0.85; }
-  .btn-secondary { background: #e2e8f0; color: #334155; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
   
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
   .empty-card { text-align: center; padding: 32px 16px; border: 2px dashed #cbd5e1; color: #64748b; border-radius: 12px; background: #fff; font-size: 13px; }
@@ -34,24 +33,12 @@
   .day-header { background: #0f766e; color: #fff; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
   .timeline-container { border-left: 3px solid #99f6e4; margin-left: 10px; padding-left: 16px; }
   .sch-time { font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 2px; }
-  .sch-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; padding-right: 85px; }
+  .sch-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px; padding-right: 75px; }
   .sch-meta { font-size: 12px; color: #475569; margin-bottom: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
   .sch-detail { font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 8px; border-radius: 6px; margin-top: 4px; white-space: pre-wrap; border-left: 2px solid #cbd5e1; }
 
-  .check-row { display: flex; align-items: flex-start; gap: 10px; padding-right: 80px; cursor: pointer; }
-  .check-row input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: #0d9488; cursor: pointer; flex-shrink: 0; }
-  .done-text { text-decoration: line-through; color: #94a3b8; }
-
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #ccfbf1; color: #0f766e; }
-  .badge-gray { background: #f1f5f9; color: #475569; }
-
-  .summary-box { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-  .summary-title { font-size: 13px; font-weight: bold; color: #0f766e; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-  .settlement-item { font-size: 13px; padding: 6px 0; border-bottom: 1px dashed #cbd5e1; display: flex; justify-content: space-between; }
-  .settlement-item:last-child { border-bottom: none; }
-
   label.field-label { display: block; font-size: 11px; font-weight: bold; color: #475569; margin-bottom: 3px; }
-  input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
+  input, select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 10px; background: #fff; color: #1e293b; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: #0d9488; }
   
   nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 20; box-shadow: 0 -2px 6px rgba(0,0,0,0.04); }
@@ -63,7 +50,7 @@
   .modal.open { display: flex; }
   .modal-box { background: #fff; width: 100%; max-width: 380px; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin: auto; max-height: 90vh; overflow-y: auto; }
   .modal-box h3 { margin-bottom: 12px; font-size: 16px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
-  .modal-btns { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 4px; }
   .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
   .btn-cancel { background: #f1f5f9; color: #475569; }
 </style>
@@ -85,10 +72,7 @@
   <div id="tab-timeline" class="tab-view">
     <div class="header-row">
       <h2>📅 旅のしおり</h2>
-      <div style="display:flex; gap:6px;">
-        <button type="button" class="btn-secondary" onclick="copyShareText('timeline')">📋 共有</button>
-        <button type="button" class="btn-primary" onclick="openScheduleModal(-1)">＋ 予定追加</button>
-      </div>
+      <button type="button" class="btn-primary" onclick="openScheduleModal(-1)">＋ 予定追加</button>
     </div>
     <div id="schedule-list"></div>
   </div>
@@ -124,10 +108,7 @@
   <div id="tab-money" class="tab-view" style="display:none;">
     <div class="header-row">
       <h2>💴 立て替え・精算</h2>
-      <div style="display:flex; gap:6px;">
-        <button type="button" class="btn-secondary" onclick="copyShareText('money')">📋 共有</button>
-        <button type="button" class="btn-primary" onclick="openExpenseModal(-1)">＋ 支出記録</button>
-      </div>
+      <button type="button" class="btn-primary" onclick="openExpenseModal()">＋ 支出記録</button>
     </div>
     <div id="expense-summary"></div>
     <div id="expense-list"></div>
@@ -142,21 +123,17 @@
   <button type="button" id="nav-money" onclick="switchTab('money')"><span class="icon">💴</span>精算</button>
 </nav>
 
-<!-- プロジェクト管理モーダル -->
+<!-- モーダル各種 -->
 <div id="modal-project" class="modal">
   <div class="modal-box">
     <h3>旅行プロジェクトの管理</h3>
     <label class="field-label">新しい旅行名を入力</label>
     <input type="text" id="new-proj-name" placeholder="例: 冬の温泉旅行">
-    <div style="margin-bottom:16px;">
-      <button type="button" class="btn-primary" style="width:100%;" onclick="createProject()">＋ 新しい旅行を作成して切り替える</button>
-    </div>
-    <div id="project-manage-list" style="margin-bottom:14px;"></div>
+    <div style="margin-bottom:14px;"><button type="button" class="btn-primary" style="width:100%;" onclick="createProject()">＋ 新しい旅行を作成して切り替える</button></div>
     <div class="modal-btns"><button type="button" class="btn-cancel" style="width:100%;" onclick="closeModal('modal-project')">閉じる</button></div>
   </div>
 </div>
 
-<!-- しおり（予定）モーダル -->
 <div id="modal-schedule" class="modal">
   <div class="modal-box">
     <h3 id="sch-modal-heading">予定の追加</h3>
@@ -164,620 +141,515 @@
     <label class="field-label">日にち</label>
     <input type="text" id="sch-day" placeholder="例: 1日目 (11/20)">
     <label class="field-label">時間</label>
-    <input type="text" id="sch-time" placeholder="例: 10:00〜11:30">
-    <label class="field-label">タイトル・目的地</label>
-コードは注意してご使用ください。
-場所・移動手段
-メモ・予約情報など
-キャンセル
-保存する
+    <input type="text" id="sch-time" placeholder="例: 10:00 〜 11:30">
+    <label class="field-label">タイトル（必須）</label>
+    <input type="text" id="sch-title" placeholder="例: 水族館到着">
+    <label class="field-label">場所</label>
+    <input type="text" id="sch-loc" placeholder="例: 駐車場P2集合">
+    <label class="field-label">担当・関係者</label>
+    <select id="sch-family"></select>
+    <label class="field-label">詳細メモ</label>
+    <textarea id="sch-detail" rows="2" placeholder="チケット購入済み等"></textarea>
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-schedule')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveSchedule()">保存する</button>
+    </div>
+  </div>
+</div>
 
+<div id="modal-family" class="modal">
+  <div class="modal-box">
+    <h3 id="fam-modal-heading">家族の追加</h3>
+    <input type="hidden" id="fam-edit-idx" value="-1">
+    <label class="field-label">家族名・グループ名（必須）</label>
+    <input type="text" id="fam-name" placeholder="例: 佐藤家">
+    <div style="display:flex; gap:8px;">
+      <div style="flex:1;"><label class="field-label">大人</label><input type="number" id="fam-adults" min="0" value="2"></div>
+      <div style="flex:1;"><label class="field-label">子供</label><input type="number" id="fam-kids" min="0" value="0"></div>
+    </div>
+    <label class="field-label">メモ</label>
+    <input type="text" id="fam-note" placeholder="車出し担当など">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-family')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveFamily()">保存する</button>
+    </div>
+  </div>
+</div>
 
-家族の追加
-家族名（世帯名）
-大人の人数
-子どもの人数
-メモ（アレルギー・車など）
-キャンセル
-保存する
+<div id="modal-item" class="modal">
+  <div class="modal-box">
+    <h3 id="item-modal-heading">持ち物の追加</h3>
+    <input type="hidden" id="item-edit-idx" value="-1">
+    <label class="field-label">持ち物名（必須）</label>
+    <input type="text" id="item-name" placeholder="例: レジャーシート">
+    <label class="field-label">担当</label>
+    <select id="item-family"></select>
+    <label class="field-label">備考</label>
+    <input type="text" id="item-note" placeholder="大きめのやつ">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-item')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveItem()">保存する</button>
+    </div>
+  </div>
+</div>
 
+<div id="modal-task" class="modal">
+  <div class="modal-box">
+    <h3 id="task-modal-heading">役割分担の追加</h3>
+    <input type="hidden" id="task-edit-idx" value="-1">
+    <label class="field-label">担当者</label>
+    <select id="task-family"></select>
+    <label class="field-label">やるべきこと・担当内容（必須）</label>
+    <textarea id="task-content" rows="2" placeholder="例: レストランの予約"></textarea>
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-task')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="saveTask()">保存する</button>
+    </div>
+  </div>
+</div>
 
-持ち物の追加
-持ち物名
-担当家族・カテゴリ
-キャンセル
-保存する
+<div id="modal-expense" class="modal">
+  <div class="modal-box">
+    <h3>立て替え支出の記録</h3>
+    <label class="field-label">立て替えた家族</label>
+    <select id="exp-payer" style="margin-bottom:10px;"></select>
+    <label class="field-label">項目</label>
+    <input type="text" id="exp-title" placeholder="例: 高速代">
+    <label class="field-label">金額（円）</label>
+    <input type="number" id="exp-amount" placeholder="4500">
+    <div class="modal-btns">
+      <button type="button" class="btn-cancel" onclick="closeModal('modal-expense')">キャンセル</button>
+      <button type="button" class="btn-primary" onclick="addExpense()">記録する</button>
+    </div>
+  </div>
+</div>
 
+<script>
+  let appData = {
+    currentId: 'proj_1',
+    projects: {
+      'proj_1': {
+        title: 'みんなの家族旅行',
+        families: [{ name: '我が家', adults: 2, kids: 1, note: '' }],
+        schedules: [],
+        items: [],
+        tasks: [],
+        expenses: []
+      }
+    }
+  };
 
-役割分担の追加
-タスク内容
-担当者
-期限・タイミング
-キャンセル
-保存する
+  try {
+    const saved = localStorage.getItem('famitabi_v5');
+    if (saved) appData = JSON.parse(saved);
+  } catch (e) {}
 
+  function getCurr() {
+    if (!appData.projects[appData.currentId]) {
+      const keys = Object.keys(appData.projects);
+      appData.currentId = keys.length > 0 ? keys[0] : 'proj_1';
+    }
+    return appData.projects[appData.currentId];
+  }
 
-立て替え支出の記録
-立て替えた家族
-内容
-金額（円）
-キャンセル
-保存する
+  function saveOnly() {
+    try { localStorage.setItem('famitabi_v5', JSON.stringify(appData)); } catch (e) {}
+  }
 
+  function saveAndRender() {
+    saveOnly();
+    render();
+  }
 
-const STORAGE_KEY = 'famitabi_link_data_v1';
-let appData = {
-currentId: '',
-projects: {}
-};
-function getDefaultProject(name) {
-return {
-name: name,
-schedules: [
-{ day: '1日目', time: '09:00', title: '集合・出発', place: '各自宅〜高速IC', detail: '安全運転で出発！飲み物とおやつ確認。' }
-],
-families: [
-{ name: 'わが家', adults: 2, children: 1, memo: '' }
-],
-items: [
-{ name: '健康保険証・母子手帳', owner: '各自', done: false },
-{ name: 'モバイルバッテリー', owner: '各自', done: false }
-],
-tasks: [
-{ title: 'しおりの共有', assignee: '幹事', due: '前日まで', done: false }
-],
-expenses: []
-};
-}
-function loadData() {
-const raw = localStorage.getItem(STORAGE_KEY);
-if (raw) {
-try {
-appData = JSON.parse(raw);
-} catch (e) {
-console.error(e);
-}
-}
-if (!appData.projects || Object.keys(appData.projects).length === 0) {
-const id = 'proj_' + Date.now();
-appData.currentId = id;
-appData.projects[id] = getDefaultProject('サンプル家族旅行');
-saveData();
-}
-if (!appData.projects[appData.currentId]) {
-appData.currentId = Object.keys(appData.projects)[0];
-}
-}
-function saveData() {
-localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-}
-function currentProj() {
-return appData.projects[appData.currentId];
-}
-function esc(str) {
-if (str === null || str === undefined) return '';
-return String(str)
-.replace(/&/g, '&')
-.replace(/</g, '<')
-.replace(/>/g, '>')
-.replace(/"/g, '"')
-.replace(/'/g, ''');
-}
-// タブ切り替え
-function switchTab(tabName) {
-document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
-document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-document.getElementById('tab-' + tabName).style.display = 'block';
-document.getElementById('nav-' + tabName).classList.add('active');
-renderAll();
-}
-// モーダル制御
-function openModal(id) {
-document.getElementById(id).classList.add('open');
-}
-function closeModal(id) {
-document.getElementById(id).classList.remove('open');
-}
-// プロジェクト管理
-function renderProjectBar() {
-const select = document.getElementById('project-dropdown');
-select.innerHTML = '';
-Object.keys(appData.projects).forEach(id => {
-const opt = document.createElement('option');
-opt.value = id;
-opt.textContent = appData.projects[id].name;
-if (id === appData.currentId) opt.selected = true;
-select.appendChild(opt);
-});
-document.getElementById('header-project-title').textContent = '✈️ ' + currentProj().name;
-}
-function switchProject(id) {
-appData.currentId = id;
-saveData();
-renderAll();
-}
-function openProjectModal() {
-document.getElementById('new-proj-name').value = '';
-const list = document.getElementById('project-manage-list');
-const keys = Object.keys(appData.projects);
-let html = '登録済みの旅行一覧';
-keys.forEach(id => {
-const p = appData.projects[id];
-const isCur = id === appData.currentId;
-html += <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:6px; background:${isCur ? '#f0fdfa' : '#fff'};"> <span style="font-size:13px; font-weight:${isCur ? 'bold' : 'normal'};">${esc(p.name)}</span> ${keys.length > 1 ?削除: '<span style="font-size:11px; color:#94a3b8;">現在選択中</span>'} </div>;
-});
-list.innerHTML = html;
-openModal('modal-project');
-}
-function createProject() {
-const name = document.getElementById('new-proj-name').value.trim();
-if (!name) {
-alert('旅行名を入力してください');
-return;
-}
-const id = 'proj_' + Date.now();
-appData.projects[id] = getDefaultProject(name);
-appData.currentId = id;
-saveData();
-closeModal('modal-project');
-renderAll();
-}
-function deleteProject(id) {
-if (!confirm('この旅行データを削除しますか？')) return;
-delete appData.projects[id];
-if (appData.currentId === id) {
-appData.currentId = Object.keys(appData.projects)[0];
-}
-saveData();
-openProjectModal();
-renderAll();
-}
-// 1. しおり（スケジュール）
-function renderSchedules() {
-const list = document.getElementById('schedule-list');
-const schedules = currentProj().schedules;
-if (schedules.length === 0) {
-list.innerHTML = 'まだ予定がありません。「＋ 予定追加」から旅のスケジュールを作成しましょう。';
-return;
-}
-// 日にちごとにグループ化（出現順を維持）
-const groups = {};
-const dayOrder = [];
-schedules.forEach((s, idx) => {
-const d = s.day || '日程未設定';
-if (!groups[d]) {
-groups[d] = [];
-dayOrder.push(d);
-}
-groups[d].push({ ...s, idx });
-});
-let html = '';
-dayOrder.forEach(day => {
-html += <div class="day-section"><div class="day-header">${esc(day)}</div><div class="timeline-container">;
-groups[day].forEach(item => {
-html += <div class="card"> <div class="card-actions"> <button type="button" class="icon-btn" onclick="openScheduleModal(${item.idx})">編集</button> <button type="button" class="icon-btn del" onclick="deleteSchedule(${item.idx})">削除</button> </div> <div class="sch-time">${esc(item.time)}</div> <div class="sch-title">${esc(item.title)}</div> ${item.place ?📍 ${esc(item.place)}: ''} ${item.detail ?${esc(item.detail)}: ''} </div>;
-});
-html += </div></div>;
-});
-list.innerHTML = html;
-}
-function openScheduleModal(idx) {
-document.getElementById('sch-edit-idx').value = idx;
-if (idx >= 0) {
-const s = currentProj().schedules[idx];
-document.getElementById('sch-modal-heading').textContent = '予定の編集';
-document.getElementById('sch-day').value = s.day;
-document.getElementById('sch-time').value = s.time;
-document.getElementById('sch-title').value = s.title;
-document.getElementById('sch-place').value = s.place;
-document.getElementById('sch-detail').value = s.detail;
-} else {
-document.getElementById('sch-modal-heading').textContent = '予定の追加';
-const lastDay = currentProj().schedules.length > 0 ? currentProj().schedules[currentProj().schedules.length - 1].day : '1日目';
-document.getElementById('sch-day').value = lastDay;
-document.getElementById('sch-time').value = '';
-document.getElementById('sch-title').value = '';
-document.getElementById('sch-place').value = '';
-document.getElementById('sch-detail').value = '';
-}
-openModal('modal-schedule');
-}
-function saveSchedule() {
-const idx = parseInt(document.getElementById('sch-edit-idx').value, 10);
-const day = document.getElementById('sch-day').value.trim() || '1日目';
-const time = document.getElementById('sch-time').value.trim();
-const title = document.getElementById('sch-title').value.trim();
-const place = document.getElementById('sch-place').value.trim();
-const detail = document.getElementById('sch-detail').value.trim();
-if (!title) {
-alert('タイトルを入力してください');
-return;
-}
-const obj = { day, time, title, place, detail };
-if (idx >= 0) {
-currentProj().schedules[idx] = obj;
-} else {
-currentProj().schedules.push(obj);
-}
-saveData();
-closeModal('modal-schedule');
-renderSchedules();
-}
-function deleteSchedule(idx) {
-if (!confirm('この予定を削除しますか？')) return;
-currentProj().schedules.splice(idx, 1);
-saveData();
-renderSchedules();
-}
-// 2. 参加家族
-function renderFamilies() {
-const list = document.getElementById('family-list');
-const families = currentProj().families;
-if (families.length === 0) {
-list.innerHTML = '参加する家族が登録されていません。「＋ 家族追加」から登録してください。';
-return;
-}
-let totalAdults = 0;
-let totalChildren = 0;
-let html = '';
-families.forEach((f, idx) => {
-const a = Number(f.adults) || 0;
-const c = Number(f.children) || 0;
-totalAdults += a;
-totalChildren += c;
-html += <div class="card"> <div class="card-actions"> <button type="button" class="icon-btn" onclick="openFamilyModal(${idx})">編集</button> <button type="button" class="icon-btn del" onclick="deleteFamily(${idx})">削除</button> </div> <div class="sch-title">${esc(f.name)}</div> <div class="sch-meta"> <span class="badge">大人 ${a}名</span> <span class="badge badge-gray">子ども ${c}名</span> </div> ${f.memo ?${esc(f.memo)}: ''} </div>;
-});
-const summaryHeader = <div class="summary-box" style="margin-bottom:12px;"> <div class="summary-title" style="margin-bottom:0;"> <span>参加合計: ${families.length}家族 / 計${totalAdults + totalChildren}名</span> <span style="font-size:12px; font-weight:normal;">(大人${totalAdults}・子${totalChildren})</span> </div> </div>;
-list.innerHTML = summaryHeader + html;
-}
-function openFamilyModal(idx) {
-document.getElementById('fam-edit-idx').value = idx;
-if (idx >= 0) {
-const f = currentProj().families[idx];
-document.getElementById('fam-modal-heading').textContent = '家族情報の編集';
-document.getElementById('fam-name').value = f.name;
-document.getElementById('fam-adults').value = f.adults;
-document.getElementById('fam-children').value = f.children;
-document.getElementById('fam-memo').value = f.memo;
-} else {
-document.getElementById('fam-modal-heading').textContent = '家族の追加';
-document.getElementById('fam-name').value = '';
-document.getElementById('fam-adults').value = 2;
-document.getElementById('fam-children').value = 1;
-document.getElementById('fam-memo').value = '';
-}
-openModal('modal-family');
-}
-function saveFamily() {
-const idx = parseInt(document.getElementById('fam-edit-idx').value, 10);
-const name = document.getElementById('fam-name').value.trim();
-const adults = parseInt(document.getElementById('fam-adults').value, 10) || 0;
-const children = parseInt(document.getElementById('fam-children').value, 10) || 0;
-const memo = document.getElementById('fam-memo').value.trim();
-if (!name) {
-alert('家族名を入力してください');
-return;
-}
-const obj = { name, adults, children, memo };
-if (idx >= 0) {
-currentProj().families[idx] = obj;
-} else {
-currentProj().families.push(obj);
-}
-saveData();
-closeModal('modal-family');
-renderFamilies();
-}
-function deleteFamily(idx) {
-if (!confirm('この家族を削除しますか？')) return;
-currentProj().families.splice(idx, 1);
-saveData();
-renderFamilies();
-}
-// 3. 持ち物リスト
-function renderItems() {
-const list = document.getElementById('item-list');
-const items = currentProj().items;
-if (items.length === 0) {
-list.innerHTML = '持ち物リストが空です。「＋ 持ち物追加」から登録しましょう。';
-return;
-}
-let html = '';
-items.forEach((item, idx) => {
-html += `
+  function switchTab(name) {
+    ['timeline', 'families', 'items', 'tasks', 'money'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = (t === name) ? 'block' : 'none';
+      document.getElementById('nav-' + t).className = (t === name) ? 'active' : '';
+    });
+    window.scrollTo(0, 0);
+  }
 
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-編集
-削除
-`;
-});
-list.innerHTML = html;
-}
-function toggleItem(idx) {
-currentProj().items[idx].done = !currentProj().items[idx].done;
-saveData();
-renderItems();
-}
-function openItemModal(idx) {
-document.getElementById('item-edit-idx').value = idx;
-if (idx >= 0) {
-const it = currentProj().items[idx];
-document.getElementById('item-modal-heading').textContent = '持ち物の編集';
-document.getElementById('item-name').value = it.name;
-document.getElementById('item-owner').value = it.owner;
-} else {
-document.getElementById('item-modal-heading').textContent = '持ち物の追加';
-document.getElementById('item-name').value = '';
-document.getElementById('item-owner').value = '各自';
-}
-openModal('modal-item');
-}
-function saveItem() {
-const idx = parseInt(document.getElementById('item-edit-idx').value, 10);
-const name = document.getElementById('item-name').value.trim();
-const owner = document.getElementById('item-owner').value.trim();
-if (!name) {
-alert('持ち物名を入力してください');
-return;
-}
-if (idx >= 0) {
-currentProj().items[idx].name = name;
-currentProj().items[idx].owner = owner;
-} else {
-currentProj().items.push({ name, owner, done: false });
-}
-saveData();
-closeModal('modal-item');
-renderItems();
-}
-function deleteItem(idx) {
-if (!confirm('この持ち物を削除しますか？')) return;
-currentProj().items.splice(idx, 1);
-saveData();
-renderItems();
-}
-// 4. 役割分担
-function renderTasks() {
-const list = document.getElementById('task-list');
-const tasks = currentProj().tasks;
-if (tasks.length === 0) {
-list.innerHTML = '役割分担がありません。「＋ 分担追加」からタスクを割り振りましょう。';
-return;
-}
-let html = '';
-tasks.forEach((t, idx) => {
-html += `
+  function openProjectModal() { openModal('modal-project'); }
+  function switchProject(id) {
+    appData.currentId = id;
+    saveOnly();
+    render();
+  }
+  function createProject() {
+    const name = document.getElementById('new-proj-name').value.trim();
+    if (!name) return alert('旅行名を入力してください');
+    const newId = 'proj_' + Date.now();
+    appData.projects[newId] = {
+      title: name,
+      families: [{ name: '我が家', adults: 2, kids: 1, note: '' }],
+      schedules: [],
+      items: [],
+      tasks: [],
+      expenses: []
+    };
+    appData.currentId = newId;
+    document.getElementById('new-proj-name').value = '';
+    closeModal('modal-project');
+    saveAndRender();
+  }
 
+  function updateFamilySelect(elementId, selectedVal = '') {
+    const curr = getCurr();
+    const sel = document.getElementById(elementId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- 指定なし / 全員 --</option>' +
+      curr.families.map(f => `<option value="${f.name}" ${f.name===selectedVal?'selected':''}>${f.name}</option>`).join('');
+  }
 
-編集
-削除
-`;
-});
-list.innerHTML = html;
-}
-function toggleTask(idx) {
-currentProj().tasks[idx].done = !currentProj().tasks[idx].done;
-saveData();
-renderTasks();
-}
-function openTaskModal(idx) {
-document.getElementById('task-edit-idx').value = idx;
-if (idx >= 0) {
-const t = currentProj().tasks[idx];
-document.getElementById('task-modal-heading').textContent = '役割分担の編集';
-document.getElementById('task-title').value = t.title;
-document.getElementById('task-assignee').value = t.assignee;
-document.getElementById('task-due').value = t.due;
-} else {
-document.getElementById('task-modal-heading').textContent = '役割分担の追加';
-document.getElementById('task-title').value = '';
-document.getElementById('task-assignee').value = '';
-document.getElementById('task-due').value = '';
-}
-openModal('modal-task');
-}
-function saveTask() {
-const idx = parseInt(document.getElementById('task-edit-idx').value, 10);
-const title = document.getElementById('task-title').value.trim();
-const assignee = document.getElementById('task-assignee').value.trim();
-const due = document.getElementById('task-due').value.trim();
-if (!title) {
-alert('タスク内容を入力してください');
-return;
-}
-if (idx >= 0) {
-currentProj().tasks[idx].title = title;
-currentProj().tasks[idx].assignee = assignee;
-currentProj().tasks[idx].due = due;
-} else {
-currentProj().tasks.push({ title, assignee, due, done: false });
-}
-saveData();
-closeModal('modal-task');
-renderTasks();
-}
-function deleteTask(idx) {
-if (!confirm('この役割分担を削除しますか？')) return;
-currentProj().tasks.splice(idx, 1);
-saveData();
-renderTasks();
-}
-// 5. 立て替え・精算
-function calculateSettlement() {
-const families = currentProj().families;
-const expenses = currentProj().expenses;
-const total = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-if (families.length === 0 || expenses.length === 0) {
-return { total, perFamily: 0, transfers: [] };
-}
-const perFamily = Math.round(total / families.length);
-const paidMap = {};
-families.forEach(f => paidMap[f.name] = 0);
-expenses.forEach(e => {
-if (paidMap[e.payer] !== undefined) {
-paidMap[e.payer] += Number(e.amount) || 0;
-} else {
-// 削除された家族名などの場合も考慮
-paidMap[e.payer] = (paidMap[e.payer] || 0) + (Number(e.amount) || 0);
-}
-});
-const debtors = [];
-const creditors = [];
-Object.keys(paidMap).forEach(name => {
-const diff = paidMap[name] - perFamily;
-if (diff < -1) debtors.push({ name, amount: -diff });
-else if (diff > 1) creditors.push({ name, amount: diff });
-});
-const transfers = [];
-let i = 0, j = 0;
-while (i < debtors.length && j < creditors.length) {
-const d = debtors[i];
-const c = creditors[j];
-const send = Math.min(d.amount, c.amount);
-if (send > 0) {
-transfers.push({ from: d.name, to: c.name, amount: Math.round(send) });
-}
-d.amount -= send;
-c.amount -= send;
-if (d.amount <= 1) i++;
-if (c.amount <= 1) j++;
-}
-return { total, perFamily, transfers };
-}
-function renderExpenses() {
-const summaryEl = document.getElementById('expense-summary');
-const listEl = document.getElementById('expense-list');
-const expenses = currentProj().expenses;
-const families = currentProj().families;
-if (families.length === 0) {
-summaryEl.innerHTML = '※先に「家族」タブから参加家族を登録すると、1家族あたりの精算額が自動計算されます。';
-} else {
-const { total, perFamily, transfers } = calculateSettlement();
-let transferHtml = '';
-if (transfers.length === 0) {
-transferHtml = '現在、精算のやり取りはありません。';
-} else {
-transfers.forEach(t => {
-transferHtml += <div class="settlement-item"> <span><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></span> <span style="font-weight:bold; color:#0f766e;">${t.amount.toLocaleString()}円</span> </div>;
-});
-}
-summaryEl.innerHTML = <div class="summary-box"> <div class="summary-title"> <span>合計: ${total.toLocaleString()}円</span> <span>1家族あたり: 約${perFamily.toLocaleString()}円</span> </div> ${transferHtml} </div>;
-}
-if (expenses.length === 0) {
-listEl.innerHTML = '立て替え記録がありません。「＋ 支出記録」から追加してください。';
-return;
-}
-let html = '';
-expenses.forEach((e, idx) => {
-html += <div class="card"> <div class="card-actions"> <button type="button" class="icon-btn" onclick="openExpenseModal(${idx})">編集</button> <button type="button" class="icon-btn del" onclick="deleteExpense(${idx})">削除</button> </div> <div class="sch-time">${esc(e.payer)} が立て替え</div> <div class="sch-title">${esc(e.title)}</div> <div style="font-size:16px; font-weight:bold; color:#0f766e;">${Number(e.amount).toLocaleString()}円</div> </div>;
-});
-listEl.innerHTML = html;
-}
-function openExpenseModal(idx) {
-const families = currentProj().families;
-if (families.length === 0) {
-alert('先に「家族」タブで参加家族を登録してください。');
-switchTab('families');
-return;
-}
-const select = document.getElementById('exp-payer');
-select.innerHTML = '';
-families.forEach(f => {
-const opt = document.createElement('option');
-opt.value = f.name;
-opt.textContent = f.name;
-select.appendChild(opt);
-});
-document.getElementById('exp-edit-idx').value = idx;
-if (idx >= 0) {
-const e = currentProj().expenses[idx];
-document.getElementById('exp-modal-heading').textContent = '支出記録の編集';
-select.value = e.payer;
-document.getElementById('exp-title').value = e.title;
-document.getElementById('exp-amount').value = e.amount;
-} else {
-document.getElementById('exp-modal-heading').textContent = '立て替え支出の記録';
-document.getElementById('exp-title').value = '';
-document.getElementById('exp-amount').value = '';
-}
-openModal('modal-expense');
-}
-function saveExpense() {
-const idx = parseInt(document.getElementById('exp-edit-idx').value, 10);
-const payer = document.getElementById('exp-payer').value;
-const title = document.getElementById('exp-title').value.trim();
-const amount = parseInt(document.getElementById('exp-amount').value, 10);
-if (!title || isNaN(amount) || amount <= 0) {
-alert('内容と正しい金額を入力してください');
-return;
-}
-const obj = { payer, title, amount };
-if (idx >= 0) {
-currentProj().expenses[idx] = obj;
-} else {
-currentProj().expenses.push(obj);
-}
-saveData();
-closeModal('modal-expense');
-renderExpenses();
-}
-function deleteExpense(idx) {
-if (!confirm('この支出記録を削除しますか？')) return;
-currentProj().expenses.splice(idx, 1);
-saveData();
-renderExpenses();
-}
-// LINE等への共有テキストコピー機能
-function copyShareText(type) {
-const proj = currentProj();
-let text = 【${proj.name}】\n;
-if (type === 'timeline') {
-text += 📅 旅のしおり\n\n;
-if (proj.schedules.length === 0) {
-text += '予定はまだ登録されていません。';
-} else {
-let currentDay = '';
-proj.schedules.forEach(s => {
-if (s.day !== currentDay) {
-currentDay = s.day;
-text += ■ ${currentDay}\n;
-}
-text += ・${s.time ? s.time + ' ' : ''}${s.title}${s.place ? '（' + s.place + '）' : ''}\n;
-if (s.detail) text += メモ: ${s.detail.replace(/\n/g, ' ')}\n;
-});
-}
-} else if (type === 'money') {
-const { total, perFamily, transfers } = calculateSettlement();
-text += 💴 立て替え精算まとめ\n;
-text += 合計金額: ${total.toLocaleString()}円\n;
-text += 1家族あたり: 約${perFamily.toLocaleString()}円\n\n;
-if (transfers.length > 0) {
-text += 【精算方法】\n;
-transfers.forEach(t => {
-text += ・${t.from} → ${t.to} : ${t.amount.toLocaleString()}円\n;
-});
-} else {
-text += 精算のやり取りはありません。\n;
-}
-}
-if (navigator.clipboard && navigator.clipboard.writeText) {
-navigator.clipboard.writeText(text).then(() => {
-alert('クリップボードにコピーしました！LINEなどに貼り付けて共有できます。');
-}).catch(() => {
-prompt('以下をコピーして共有してください:', text);
-});
-} else {
-prompt('以下をコピーして共有してください:', text);
-}
-}
-function renderAll() {
-renderProjectBar();
-renderSchedules();
-renderFamilies();
-renderItems();
-renderTasks();
-renderExpenses();
-}
-// 初期化
-loadData();
-renderAll();
+  // --- 予定（しおり） ---
+  function openScheduleModal(idx) {
+    document.getElementById('sch-edit-idx').value = idx;
+    updateFamilySelect('sch-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('sch-modal-heading').textContent = '予定の編集';
+      const s = curr.schedules[idx];
+      document.getElementById('sch-day').value = s.day || '';
+      document.getElementById('sch-time').value = s.time || '';
+      document.getElementById('sch-title').value = s.title || '';
+      document.getElementById('sch-loc').value = s.loc || '';
+      document.getElementById('sch-family').value = s.family || '';
+      document.getElementById('sch-detail').value = s.detail || '';
+    } else {
+      document.getElementById('sch-modal-heading').textContent = '予定の追加';
+      const lastDay = curr.schedules.length > 0 ? (curr.schedules[curr.schedules.length - 1].day || '1日目') : '1日目';
+      document.getElementById('sch-day').value = lastDay;
+      document.getElementById('sch-time').value = '';
+      document.getElementById('sch-title').value = '';
+      document.getElementById('sch-loc').value = '';
+      document.getElementById('sch-detail').value = '';
+    }
+    openModal('modal-schedule');
+  }
+
+  function saveSchedule() {
+    const title = document.getElementById('sch-title').value.trim();
+    if (!title) return alert('予定タイトルを入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('sch-edit-idx').value);
+    const item = {
+      day: document.getElementById('sch-day').value.trim() || '日程未定',
+      time: document.getElementById('sch-time').value.trim(),
+      title: title,
+      loc: document.getElementById('sch-loc').value.trim(),
+      family: document.getElementById('sch-family').value,
+      detail: document.getElementById('sch-detail').value.trim()
+    };
+    if (idx >= 0) curr.schedules[idx] = item;
+    else curr.schedules.push(item);
+    closeModal('modal-schedule');
+    saveAndRender();
+  }
+
+  function deleteSchedule(idx) {
+    if (confirm('この予定を削除しますか？')) {
+      const curr = getCurr();
+      curr.schedules.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
+  // --- 家族管理 ---
+  function openFamilyModal(idx) {
+    document.getElementById('fam-edit-idx').value = idx;
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('fam-modal-heading').textContent = '家族情報の編集';
+      const f = curr.families[idx];
+      document.getElementById('fam-name').value = f.name || '';
+      document.getElementById('fam-adults').value = f.adults ?? 2;
+      document.getElementById('fam-kids').value = f.kids ?? 0;
+      document.getElementById('fam-note').value = f.note || '';
+    } else {
+      document.getElementById('fam-modal-heading').textContent = '家族の追加';
+      document.getElementById('fam-name').value = '';
+      document.getElementById('fam-adults').value = 2;
+      document.getElementById('fam-kids').value = 1;
+      document.getElementById('fam-note').value = '';
+    }
+    openModal('modal-family');
+  }
+
+  function saveFamily() {
+    const name = document.getElementById('fam-name').value.trim();
+    if (!name) return alert('家族名を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('fam-edit-idx').value);
+    const item = {
+      name: name,
+      adults: Number(document.getElementById('fam-adults').value) || 0,
+      kids: Number(document.getElementById('fam-kids').value) || 0,
+      note: document.getElementById('fam-note').value.trim()
+    };
+    if (idx >= 0) curr.families[idx] = item;
+    else curr.families.push(item);
+    closeModal('modal-family');
+    saveAndRender();
+  }
+
+  function deleteFamily(idx) {
+    if (confirm('この家族を削除しますか？')) {
+      const curr = getCurr();
+      curr.families.splice(idx, 1);
+      saveAndRender();
+    }
+  }
+
+  // --- 持ち物管理 ---
+  function openItemModal(idx) {
+    document.getElementById('item-edit-idx').value = idx;
+    updateFamilySelect('item-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('item-modal-heading').textContent = '持ち物の編集';
+      const it = curr.items[idx];
+      document.getElementById('item-name').value = it.name || '';
+      document.getElementById('item-family').value = it.family || '';
+      document.getElementById('item-note').value = it.note || '';
+    } else {
+      document.getElementById('item-modal-heading').textContent = '持ち物の追加';
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-note').value = '';
+    }
+    openModal('modal-item');
+  }
+
+  function saveItem() {
+    const name = document.getElementById('item-name').value.trim();
+    if (!name) return alert('持ち物名を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('item-edit-idx').value);
+    const item = {
+      name: name,
+      family: document.getElementById('item-family').value,
+      note: document.getElementById('item-note').value.trim(),
+      done: idx >= 0 ? curr.items[idx].done : false
+    };
+    if (idx >= 0) curr.items[idx] = item;
+    else curr.items.push(item);
+    closeModal('modal-item');
+    saveAndRender();
+  }
+
+  function deleteItem(idx) {
+    const curr = getCurr();
+    curr.items.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 役割分担管理 ---
+  function openTaskModal(idx) {
+    document.getElementById('task-edit-idx').value = idx;
+    updateFamilySelect('task-family');
+    const curr = getCurr();
+    if (idx >= 0) {
+      document.getElementById('task-modal-heading').textContent = '役割分担の編集';
+      const t = curr.tasks[idx];
+      document.getElementById('task-family').value = t.family || '';
+      document.getElementById('task-content').value = t.content || '';
+    } else {
+      document.getElementById('task-modal-heading').textContent = '役割分担の追加';
+      document.getElementById('task-content').value = '';
+    }
+    openModal('modal-task');
+  }
+
+  function saveTask() {
+    const content = document.getElementById('task-content').value.trim();
+    if (!content) return alert('分担内容を入力してください');
+    const curr = getCurr();
+    const idx = Number(document.getElementById('task-edit-idx').value);
+    const item = {
+      family: document.getElementById('task-family').value || '未割当',
+      content: content
+    };
+    if (idx >= 0) curr.tasks[idx] = item;
+    else curr.tasks.push(item);
+    closeModal('modal-task');
+    saveAndRender();
+  }
+
+  function deleteTask(idx) {
+    const curr = getCurr();
+    curr.tasks.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 精算管理 ---
+  function openExpenseModal() {
+    updateFamilySelect('exp-payer');
+    document.getElementById('exp-title').value = '';
+    document.getElementById('exp-amount').value = '';
+    openModal('modal-expense');
+  }
+
+  function addExpense() {
+    const title = document.getElementById('exp-title').value.trim();
+    const amount = document.getElementById('exp-amount').value;
+    if (!title || !amount) return alert('項目と金額を入力してください');
+    const curr = getCurr();
+    curr.expenses.push({
+      payer: document.getElementById('exp-payer').value || '誰か',
+      title: title,
+      amount: Number(amount)
+    });
+    closeModal('modal-expense');
+    saveAndRender();
+  }
+
+  function deleteExpense(idx) {
+    const curr = getCurr();
+    curr.expenses.splice(idx, 1);
+    saveAndRender();
+  }
+
+  // --- 画面描画 ---
+  function render() {
+    const curr = getCurr();
+    
+    document.getElementById('header-project-title').textContent = '✈️ ' + curr.title;
+    const projSel = document.getElementById('project-dropdown');
+    projSel.innerHTML = Object.keys(appData.projects).map(id => 
+      `<option value="${id}" ${id===appData.currentId?'selected':''}>${appData.projects[id].title}</option>`
+    ).join('');
+
+    // 1. タイムライン
+    const schEl = document.getElementById('schedule-list');
+    if (curr.schedules.length === 0) {
+      schEl.innerHTML = '<div class="empty-card">予定がありません<br><small>「＋ 予定追加」からタイムラインを作成しましょう</small></div>';
+    } else {
+      const groups = {};
+      const dayOrder = [];
+      curr.schedules.forEach((s, originalIdx) => {
+        const d = s.day || '日程未定';
+        if (!groups[d]) { groups[d] = []; dayOrder.push(d); }
+        groups[d].push({ ...s, originalIdx });
+      });
+
+      schEl.innerHTML = dayOrder.map(day => `
+        <div class="day-section">
+          <div class="day-header">📅 ${day}</div>
+          <div class="timeline-container">
+            ${groups[day].map(s => `
+              <div class="card">
+                <div class="card-actions">
+                  <button type="button" class="icon-btn" onclick="openScheduleModal(${s.originalIdx})">編集</button>
+                  <button type="button" class="icon-btn del" onclick="deleteSchedule(${s.originalIdx})">削除</button>
+                </div>
+                <div class="sch-time">🕒 ${s.time || '時間未定'}</div>
+                <div class="sch-title">${s.title}</div>
+                <div class="sch-meta">
+                  ${s.loc ? `<span>📍 ${s.loc}</span>` : ''}
+                  ${s.family ? `<span style="background:#ccfbf1; color:#115e59; padding:1px 6px; border-radius:4px; font-weight:bold;">👤 ${s.family}</span>` : ''}
+                </div>
+                ${s.detail ? `<div class="sch-detail">${s.detail}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. 家族
+    const famEl = document.getElementById('family-list');
+    if (curr.families.length === 0) {
+      famEl.innerHTML = '<div class="empty-card">家族が登録されていません</div>';
+    } else {
+      famEl.innerHTML = curr.families.map((f, i) => `
+        <div class="card">
+          <div class="card-actions">
+            <button type="button" class="icon-btn" onclick="openFamilyModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteFamily(${i})">削除</button>
+          </div>
+          <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${f.name}</div>
+          <div style="font-size:12px; color:#0f766e; font-weight:600;">大人 ${f.adults}名 ・ 子供 ${f.kids}名</div>
+          ${f.note ? `<div style="font-size:11px; color:#64748b; margin-top:2px;">${f.note}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // 3. 持ち物
+    const itemEl = document.getElementById('item-list');
+    if (curr.items.length === 0) {
+      itemEl.innerHTML = '<div class="empty-card">持ち物が登録されていません</div>';
+    } else {
+      itemEl.innerHTML = curr.items.map((it, i) => `
+        <div class="card" style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" ${it.checked ? 'checked' : ''} onclick="curr.items[${i}].checked = !curr.items[${i}].checked; saveOnly();" style="width:20px; height:20px; accent-color:#0d9488;">
+          <div style="flex:1;">
+            <div style="font-weight:bold; font-size:14px; text-decoration:${it.checked?'line-through':''}; color:${it.checked?'#94a3b8':'#1e293b'}">${it.name}</div>
+            <div style="font-size:11px; color:#64748b;">担当: <b>${it.family || '指定なし'}</b> ${it.note ? ' / ' + it.note : ''}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="icon-btn" onclick="openItemModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteItem(${i})">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 4. 役割分担
+    const taskEl = document.getElementById('task-list');
+    if (curr.tasks.length === 0) {
+      taskEl.innerHTML = '<div class="empty-card">役割分担が登録されていません</div>';
+    } else {
+      taskEl.innerHTML = curr.tasks.map((t, i) => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:11px; background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold;">👤 ${t.family}</span>
+            <div style="font-weight:bold; font-size:14px; margin-top:4px;">${t.content}</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="icon-btn" onclick="openTaskModal(${i})">編集</button>
+            <button type="button" class="icon-btn del" onclick="deleteTask(${i})">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 5. 精算
+    const expSumEl = document.getElementById('expense-summary');
+    const expEl = document.getElementById('expense-list');
+    const totalAmount = curr.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const famCount = (curr.families && curr.families.length > 0) ? curr.families.length : 1;
+
+    if (curr.expenses.length === 0) {
+      expSumEl.innerHTML = '';
+      expEl.innerHTML = '<div class="empty-card">立て替え記録はありません</div>';
+    } else {
+      expSumEl.innerHTML = `
+        <div class="card" style="background:#f0fdfa; border-color:#99f6e4; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:11px; color:#0f766e; font-weight:bold;">立て替え合計（${famCount}家族割）</div>
+            <div style="font-size:11px; color:#475569;">1家族あたり約 <b>¥${Math.round(totalAmount / famCount).toLocaleString()}</b></div>
+          </div>
+          <div style="font-size:18px; font-weight:bold; color:#0f766e;">¥${totalAmount.toLocaleString()}</div>
+        </div>
+      `;
+      expEl.innerHTML = curr.expenses.map((e, i) => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:11px; background:#ccfbf1; color:#115e59; padding:2px 6px; border-radius:4px; font-weight:bold;">${e.payer}支払い</span>
+            <div style="font-weight:bold; margin-top:3px; font-size:14px;">${e.title}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-weight:bold; color:#0f766e; font-size:15px;">¥${e.amount.toLocaleString()}</span>
+            <button type="button" class="icon-btn del" onclick="deleteExpense(${i})">削除ボタン</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>
