@@ -8,26 +8,28 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- PWAマニフェスト動的生成 -->
+    <!-- PWAマニフェスト動적生成 -->
     <script>
-        const manifest = {
-            "name": "ファミ旅リンク",
-            "short_name": "ファミ旅",
-            "start_url": window.location.href,
-            "display": "standalone",
-            "background_color": "#f8fafc",
-            "theme_color": "#0d9488",
-            "icons": [{
-                "src": "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }]
-        };
-        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = URL.createObjectURL(blob);
-        document.head.appendChild(link);
+        try {
+            const manifest = {
+                "name": "ファミ旅リンク",
+                "short_name": "ファミ旅",
+                "start_url": window.location.href,
+                "display": "standalone",
+                "background_color": "#f8fafc",
+                "theme_color": "#0d9488",
+                "icons": [{
+                    "src": "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }]
+            };
+            const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = URL.createObjectURL(blob);
+            document.head.appendChild(link);
+        } catch(e) {}
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -63,15 +65,4 @@
         <div id="tab-money" class="tab-content space-y-4" style="display: none;">
             <div class="flex justify-between items-center">
                 <h2 class="font-bold text-lg text-slate-700">精算管理</h2>
-                <button onclick="openModal('expense')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i>支出記録</button>
-            </div>
-            <div id="expense-list" class="space-y-3"></div>
-        </div>
-
-        <!-- 設定タブ -->
-        <div id="tab-settings" class="tab-content space-y-4" style="display: none;">
-            <div class="bg-white p-4 rounded-xl shadow border border-slate-200 space-y-3">
-                <h2 class="font-bold text-teal-800"><i class="fa-solid fa-gear mr-2"></i>家族・旅行設定</h2>
-                <div>
-                    <label class="block text-xs text-slate-500 mb-1">旅行タイトル</label>
-                    <input id="trip-title" type="text" oninput="saveSettings()" class="w-full p-2 border
+                
