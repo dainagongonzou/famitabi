@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- PWAマニフェスト生成 -->
+    <!-- PWAマニフェスト動的生成 -->
     <script>
         const manifest = {
             "name": "ファミ旅リンク",
@@ -31,12 +31,10 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Vue 3を確実に読み込むCDN -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
-    <div id="app" class="max-w-md mx-auto pb-24" style="display: none;" :style="{ display: 'block' }">
+    <div id="app" class="max-w-md mx-auto pb-24">
         <!-- ヘッダー -->
         <header class="bg-teal-700 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
             <h1 class="font-bold text-lg"><i class="fa-solid fa-plane-departure mr-2"></i>ファミ旅リンク</h1>
@@ -45,34 +43,41 @@
 
         <!-- メインコンテンツ -->
         <main class="p-4 space-y-6">
-            <!-- 設定タブ -->
-            <div v-if="currentTab === 'settings'" class="space-y-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="font-bold text-teal-800 mb-3"><i class="fa-solid fa-gear mr-2"></i>旅行・家族の設定</h2>
-                    <label class="block text-sm text-slate-600 mb-1">旅行タイトル</label>
-                    <input v-model="trip.title" type="text" class="w-full p-2 border rounded mb-3" placeholder="例：夏休み家族旅行">
-                    <h3 class="font-bold text-sm text-slate-700 mb-2">参加家族一覧</h3>
-                    <div v-for="(fam, index) in trip.families" :key="index" class="flex gap-2 mb-2 items-center">
-                        <input v-model="fam.name" type="text" class="w-1/2 p-2 border rounded text-sm" placeholder="家族名（例: 佐藤家）">
-                        <input v-model.number="fam.adults" type="number" class="w-1/6 p-2 border rounded text-sm" placeholder="大人">
-                        <input v-model.number="fam.kids" type="number" class="w-1/6 p-2 border rounded text-sm" placeholder="子供">
-                        <button @click="removeFamily(index)" class="text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <button @click="addFamily" class="w-full bg-slate-100 text-teal-700 py-2 rounded text-sm font-bold border border-dashed border-teal-300 mt-2">+ 家族を追加</button>
+            <!-- タイムラインタブ -->
+            <div id="tab-timeline" class="tab-content space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-slate-700">旅行のしおり</h2>
+                    <button onclick="openModal('schedule')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>予定追加</button>
                 </div>
+                <div id="schedule-list" class="space-y-3"></div>
             </div>
 
-            <!-- タイムラインタブ -->
-            <div v-if="currentTab === 'timeline'" class="space-y-4">
+            <!-- 投票タブ -->
+            <div id="tab-votes" class="tab-content space-y-4" style="display: none;">
                 <div class="flex justify-between items-center">
-                    <h2 class="font-bold text-lg text-slate-700">旅行のしおり（タイムライン）</h2>
-                    <button @click="openScheduleModal = true" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>予定追加</button>
+                    <h2 class="font-bold text-lg text-slate-700">みんなの希望・やりたいこと</h2>
+                    <button onclick="openModal('vote')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>希望を追加</button>
                 </div>
-                <div v-if="schedules.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6">
-                    <i class="fa-solid fa-calendar-days text-4xl text-slate-300 mb-2"></i>
-                    <p class="text-slate-500 font-medium">まだ予定が登録されていません</p>
-                    <p class="text-xs text-slate-400 mt-1">「予定追加」ボタンから最初のスケジュールを入力しましょう。</p>
+                <div id="vote-list" class="space-y-3"></div>
+            </div>
+
+            <!-- 精算タブ -->
+            <div id="tab-money" class="tab-content space-y-4" style="display: none;">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-slate-700">立て替え・精算管理</h2>
+                    <button onclick="openModal('expense')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>支出を記録</button>
                 </div>
-                <div v-else class="space-y-3">
-                    <div v-for="(sch, i) in schedules" :key="i" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between text-xs text-slate-500 mb
+                <div id="expense-list" class="space-y-3"></div>
+            </div>
+
+            <!-- 設定タブ -->
+            <div id="tab-settings" class="tab-content space-y-4" style="display: none;">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                    <h2 class="font-bold text-teal-800"><i class="fa-solid fa-gear mr-2"></i>旅行・家族の設定</h2>
+                    <div>
+                        <label class="block text-sm text-slate-600 mb-1">旅行タイトル</label>
+                        <input id="trip-title" type="text" oninput="saveSettings()" class="w-full p-2 border rounded text-sm" placeholder="例：夏休み家族旅行">
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-700 pt-2">参加家族一覧</h3>
+                    <div id="family-list" class="space-y-2"></div>
+                    <button onclick="addFamily()" class="w-full bg-slate-100
