@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ファミ旅リンク - グループ旅行しおり＆精算</title>
-    <!-- PWA用のメタタグ（アプリとして認識させる設定） -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- 動的マニフェスト生成スクリプト -->
+    <!-- PWAマニフェスト生成 -->
     <script>
         const manifest = {
             "name": "ファミ旅リンク",
@@ -18,29 +17,26 @@
             "display": "standalone",
             "background_color": "#f8fafc",
             "theme_color": "#0d9488",
-            "icons": [
-                {
-                    "src": "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
-                    "sizes": "512x512",
-                    "type": "image/png",
-                    "purpose": "any maskable"
-                }
-            ]
+            "icons": [{
+                "src": "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }]
         };
         const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
         const link = document.createElement('link');
         link.rel = 'manifest';
-        link.href = manifestURL;
+        link.href = URL.createObjectURL(blob);
         document.head.appendChild(link);
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Vue 3を確実に読み込むCDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
-    <div id="app" class="max-w-md mx-auto pb-24">
+    <div id="app" class="max-w-md mx-auto pb-24" style="display: none;" :style="{ display: 'block' }">
         <!-- ヘッダー -->
         <header class="bg-teal-700 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
             <h1 class="font-bold text-lg"><i class="fa-solid fa-plane-departure mr-2"></i>ファミ旅リンク</h1>
@@ -75,151 +71,8 @@
                 <div v-if="schedules.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6">
                     <i class="fa-solid fa-calendar-days text-4xl text-slate-300 mb-2"></i>
                     <p class="text-slate-500 font-medium">まだ予定が登録されていません</p>
-                    <p class="text-xs text-slate-400 mt-1">右上の「予定追加」ボタンから最初のスケジュールを入力しましょう。</p>
+                    <p class="text-xs text-slate-400 mt-1">「予定追加」ボタンから最初のスケジュールを入力しましょう。</p>
                 </div>
                 <div v-else class="space-y-3">
                     <div v-for="(sch, i) in schedules" :key="i" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between text-xs text-slate-500 mb-1">
-                            <span><i class="fa-regular fa-clock mr-1"></i>{{ sch.time }}</span>
-                            <span :class="sch.type === 'all' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'" class="px-2 py-0.5 rounded-full font-bold">{{ sch.type === 'all' ? '全員一緒' : '自由・別行動' }}</span>
-                        </div>
-                        <h3 class="font-bold text-slate-800">{{ sch.title }}</h3>
-                        <p class="text-xs text-slate-600 mt-1"><i class="fa-solid fa-location-dot mr-1 text-red-500"></i>{{ sch.location }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 投票タブ -->
-            <div v-if="currentTab === 'votes'" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="font-bold text-lg text-slate-700">みんなの希望・やりたいこと</h2>
-                    <button @click="openVoteModal = true" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>希望を追加</button>
-                </div>
-                <div v-if="votes.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6">
-                    <i class="fa-solid fa-thumbs-up text-4xl text-slate-300 mb-2"></i>
-                    <p class="text-slate-500 font-medium">希望や行きたい場所がありません</p>
-                    <p class="text-xs text-slate-400 mt-1">「希望を追加」から行きたい場所や食べたいものを提案してみましょう。</p>
-                </div>
-                <div v-else class="space-y-3">
-                    <div v-for="(v, i) in votes" :key="i" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded mr-2">{{ v.family }}</span>
-                            <h3 class="font-bold text-slate-800 inline">{{ v.title }}</h3>
-                            <p class="text-xs text-slate-500 mt-1">{{ v.desc }}</p>
-                        </div>
-                        <button @click="v.likes++" class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1">
-                            <i class="fa-solid fa-heart"></i> {{ v.likes }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 精算・持ち物タブ -->
-            <div v-if="currentTab === 'money'" class="space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="font-bold text-lg text-slate-700">立て替え・精算管理</h2>
-                    <button @click="openExpenseModal = true" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus mr-1"></i>支出を記録</button>
-                </div>
-                <div v-if="expenses.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6">
-                    <i class="fa-solid fa-wallet text-4xl text-slate-300 mb-2"></i>
-                    <p class="text-slate-500 font-medium">まだ立て替え記録がありません</p>
-                    <p class="text-xs text-slate-400 mt-1">「支出を記録」からチケット代や食事代を入力すると自動精算されます。</p>
-                </div>
-                <div v-else class="space-y-3">
-                    <div v-for="(ex, i) in expenses" :key="i" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded font-bold">{{ ex.payer }}が支払い</span>
-                            <h3 class="font-bold text-slate-800 mt-1">{{ ex.title }}</h3>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-bold text-teal-700">¥{{ Number(ex.amount).toLocaleString() }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- ボトムナビゲーション -->
-        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 flex justify-around py-3 text-xs text-slate-500 shadow-lg z-40">
-            <button @click="currentTab = 'timeline'" :class="currentTab === 'timeline' ? 'text-teal-600 font-bold' : ''" class="flex flex-col items-center"><i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>しおり</button>
-            <button @click="currentTab = 'votes'" :class="currentTab === 'votes' ? 'text-teal-600 font-bold' : ''" class="flex flex-col items-center"><i class="fa-solid fa-list-check text-lg mb-0.5"></i>希望投票</button>
-            <button @click="currentTab = 'money'" :class="currentTab === 'money' ? 'text-teal-600 font-bold' : ''" class="flex flex-col items-center"><i class="fa-solid fa-yen-sign text-lg mb-0.5"></i>精算・持ち物</button>
-            <button @click="currentTab = 'settings'" :class="currentTab === 'settings' ? 'text-teal-600 font-bold' : ''" class="flex flex-col items-center"><i class="fa-solid fa-gear text-lg mb-0.5"></i>家族設定</button>
-        </nav>
-
-        <!-- 予定追加モーダル -->
-        <div v-if="openScheduleModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-xl">
-                <h3 class="font-bold text-lg text-slate-800">予定の追加</h3>
-                <input v-model="newSch.time" type="text" class="w-full p-2 border rounded text-sm" placeholder="時間（例: 10:00）">
-                <input v-model="newSch.title" type="text" class="w-full p-2 border rounded text-sm" placeholder="予定内容（例: 水族館到着）">
-                <input v-model="newSch.location" type="text" class="w-full p-2 border rounded text-sm" placeholder="場所・スポット名">
-                <select v-model="newSch.type" class="w-full p-2 border rounded text-sm">
-                    <option value="all">全員一緒</option>
-                    <option value="free">自由・別行動</option>
-                </select>
-                <div class="flex gap-2 pt-2">
-                    <button @click="openScheduleModal = false" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold">キャンセル</button>
-                    <button @click="addSchedule" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold">追加する</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 希望追加モーダル -->
-        <div v-if="openVoteModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-xl">
-                <h3 class="font-bold text-lg text-slate-800">やりたいこと・希望の追加</h3>
-                <input v-model="newVote.family" type="text" class="w-full p-2 border rounded text-sm" placeholder="提案する家族（例: 佐藤家）">
-                <input v-model="newVote.title" type="text" class="w-full p-2 border rounded text-sm" placeholder="タイトル（例: 海鮮丼を食べたい）">
-                <textarea v-model="newVote.desc" class="w-full p-2 border rounded text-sm" placeholder="詳細・理由など"></textarea>
-                <div class="flex gap-2 pt-2">
-                    <button @click="openVoteModal = false" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold">キャンセル</button>
-                    <button @click="addVote" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold">追加する</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 支出追加モーダル -->
-        <div v-if="openExpenseModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-xl">
-                <h3 class="font-bold text-lg text-slate-800">立て替え支出の記録</h3>
-                <input v-model="newExpense.payer" type="text" class="w-full p-2 border rounded text-sm" placeholder="立て替えた家族（例: 鈴木家）">
-                <input v-model="newExpense.title" type="text" class="w-full p-2 border rounded text-sm" placeholder="項目（例: 宿泊費一括払い）">
-                <input v-model.number="newExpense.amount" type="number" class="w-full p-2 border rounded text-sm" placeholder="金額（円）">
-                <div class="flex gap-2 pt-2">
-                    <button @click="openExpenseModal = false" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold">キャンセル</button>
-                    <button @click="addExpense" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold">記録する</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const { createApp, ref, reactive, watch, onMounted } = Vue;
-        createApp({
-            setup() {
-                const currentTab = ref('timeline');
-                const openScheduleModal = ref(false);
-                const openVoteModal = ref(false);
-                const openExpenseModal = ref(false);
-
-                const trip = reactive(JSON.parse(localStorage.getItem('ft_trip')) || {
-                    title: 'みんなの家族旅行',
-                    families: [{ name: '我が家', adults: 2, kids: 1 }]
-                });
-                const schedules = ref(JSON.parse(localStorage.getItem('ft_schedules')) || []);
-                const votes = ref(JSON.parse(localStorage.getItem('ft_votes')) || []);
-                const expenses = ref(JSON.parse(localStorage.getItem('ft_expenses')) || []);
-
-                const newSch = reactive({ time: '', title: '', location: '', type: 'all' });
-                const newVote = reactive({ family: '', title: '', desc: '', likes: 1 });
-                const newExpense = reactive({ payer: '', title: '', amount: '' });
-
-                watch([trip, schedules, votes, expenses], () => {
-                    localStorage.setItem('ft_trip', JSON.stringify(trip));
-                    localStorage.setItem('ft_schedules', JSON.stringify(schedules.value));
-                    localStorage.setItem('ft_votes', JSON.stringify(votes.value));
-                    localStorage.setItem('ft_expenses', JSON.stringify(expenses.value));
-                }, { deep: true });
-
-                const addFamily = () => trip.families.push({ name: '', adults
+                        <div class="flex justify-between text-xs text-slate-500 mb
