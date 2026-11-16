@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- PWAマニフェスト動적生成 -->
+    <!-- PWAマニフェスト動的生成 -->
     <script>
         try {
             const manifest = {
@@ -76,7 +76,7 @@
                 <h2 class="font-bold text-teal-800"><i class="fa-solid fa-gear mr-2"></i>家族・旅行設定</h2>
                 <div>
                     <label class="block text-xs text-slate-500 mb-1">旅行タイトル</label>
-                    <input id="trip-title" type="text" oninput="saveSettings()" class="w-full p-2 border rounded text-sm" placeholder="例：夏休み家族旅行">
+                    <input id="trip-title" type="text" oninput="db.trip.title=this.value; saveStorageOnly();" class="w-full p-2 border rounded text-sm" placeholder="例：夏休み家族旅行">
                 </div>
                 <h3 class="font-bold text-sm text-slate-700 pt-2">参加家族一覧</h3>
                 <div id="family-list" class="space-y-2"></div>
@@ -93,236 +93,10 @@
         <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center"><i class="fa-solid fa-gear text-lg mb-0.5"></i>設定</button>
     </nav>
 
-    <!-- モーダル：予定追加 -->
+    <!-- モーダル：予定追加・編集 -->
     <div id="modal-schedule" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3 shadow-xl">
-            <h3 class="font-bold text-base text-slate-800">予定の追加</h3>
+            <h3 id="sch-modal-title" class="font-bold text-base text-slate-800">予定の追加</h3>
+            <input id="sch-index" type="hidden" value="-1">
             <input id="sch-time" type="text" class="w-full p-2 border rounded text-sm" placeholder="時間（例: 10:00）">
-            <input id="sch-title" type="text" class="w-full p-2 border rounded text-sm" placeholder="予定内容（例: 水族館到着）">
-            <input id="sch-loc" type="text" class="w-full p-2 border rounded text-sm" placeholder="場所・スポット名">
-            <select id="sch-type" class="w-full p-2 border rounded text-sm">
-                <option value="all">全員一緒</option>
-                <option value="free">自由・別行動</option>
-            </select>
-            <div class="flex gap-2 pt-2">
-                <button onclick="closeModal('schedule')" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold text-sm">キャンセル</button>
-                <button onclick="addSchedule()" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold text-sm">追加する</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- モーダル：希望追加 -->
-    <div id="modal-vote" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3 shadow-xl">
-            <h3 class="font-bold text-base text-slate-800">希望の追加</h3>
-            <input id="vote-family" type="text" class="w-full p-2 border rounded text-sm" placeholder="提案家族（例: 佐藤家）">
-            <input id="vote-title" type="text" class="w-full p-2 border rounded text-sm" placeholder="タイトル（例: 海鮮丼を食べたい）">
-            <textarea id="vote-desc" class="w-full p-2 border rounded text-sm" placeholder="詳細"></textarea>
-            <div class="flex gap-2 pt-2">
-                <button onclick="closeModal('vote')" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold text-sm">キャンセル</button>
-                <button onclick="addVote()" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold text-sm">追加する</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- モーダル：支出記録 -->
-    <div id="modal-expense" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3 shadow-xl">
-            <h3 class="font-bold text-base text-slate-800">立て替え支出の記録</h3>
-            <input id="exp-payer" type="text" class="w-full p-2 border rounded text-sm" placeholder="立て替えた家族（例: 鈴木家）">
-            <input id="exp-title" type="text" class="w-full p-2 border rounded text-sm" placeholder="項目（例: 宿泊費）">
-            <input id="exp-amount" type="number" class="w-full p-2 border rounded text-sm" placeholder="金額（円）">
-            <div class="flex gap-2 pt-2">
-                <button onclick="closeModal('expense')" class="w-1/2 bg-slate-100 text-slate-600 py-2 rounded font-bold text-sm">キャンセル</button>
-                <button onclick="addExpense()" class="w-1/2 bg-teal-600 text-white py-2 rounded font-bold text-sm">記録する</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // 安全なデータ読み込み（エラー時に初期値に戻す）
-        function safeGet(key, defaultVal) {
-            try {
-                const item = localStorage.getItem(key);
-                return item ? JSON.parse(item) : defaultVal;
-            } catch(e) {
-                return defaultVal;
-            }
-        }
-
-        let db = {
-            trip: safeGet('ft_trip', { title: 'みんなの家族旅行', families: [{ name: '我が家', adults: 2, kids: 1 }] }),
-            schedules: safeGet('ft_schedules', []),
-            votes: safeGet('ft_votes', []),
-            expenses: safeGet('ft_expenses', [])
-        };
-
-        function saveData() {
-            try {
-                localStorage.setItem('ft_trip', JSON.stringify(db.trip));
-                localStorage.setItem('ft_schedules', JSON.stringify(db.schedules));
-                localStorage.setItem('ft_votes', JSON.stringify(db.votes));
-                localStorage.setItem('ft_expenses', JSON.stringify(db.expenses));
-            } catch(e) {}
-            render();
-        }
-
-        function switchTab(tabName) {
-            ['timeline', 'votes', 'money', 'settings'].forEach(t => {
-                const el = document.getElementById('tab-' + t);
-                const nav = document.getElementById('nav-' + t);
-                if(el) el.style.display = (t === tabName) ? 'block' : 'none';
-                if(nav) nav.className = (t === tabName) 
-                    ? 'flex flex-col items-center text-teal-600 font-bold' 
-                    : 'flex flex-col items-center text-slate-500';
-            });
-            window.scrollTo(0, 0);
-        }
-
-        function openModal(name) { 
-            const m = document.getElementById('modal-' + name);
-            if(m) m.style.display = 'flex'; 
-        }
-        function closeModal(name) { 
-            const m = document.getElementById('modal-' + name);
-            if(m) m.style.display = 'none'; 
-        }
-
-        function render() {
-            try {
-                const tripTitle = document.getElementById('trip-title');
-                if(tripTitle) tripTitle.value = db.trip.title || '';
-
-                let famHtml = '';
-                if(db.trip && db.trip.families) {
-                    db.trip.families.forEach((f, i) => {
-                        famHtml += `<div class="flex gap-2 items-center">
-                            <input type="text" value="${f.name || ''}" oninput="db.trip.families[${i}].name=this.value;saveData();" class="w-1/2 p-2 border rounded text-sm" placeholder="家族名">
-                            <input type="number" value="${f.adults || 0}" oninput="db.trip.families[${i}].adults=Number(this.value);saveData();" class="w-1/6 p-2 border rounded text-sm" placeholder="大人">
-                            <input type="number" value="${f.kids || 0}" oninput="db.trip.families[${i}].kids=Number(this.value);saveData();" class="w-1/6 p-2 border rounded text-sm" placeholder="子供">
-                            <button onclick="db.trip.families.splice(${i},1);saveData();" class="text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
-                        </div>`;
-                    });
-                }
-                const famList = document.getElementById('family-list');
-                if(famList) famList.innerHTML = famHtml;
-
-                let schHtml = db.schedules.length === 0 
-                    ? `<div class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6"><i class="fa-solid fa-calendar-days text-4xl text-slate-300 mb-2"></i><p class="text-slate-500 font-medium text-sm">予定がありません</p><p class="text-xs text-slate-400 mt-1">「予定追加」から登録してください</p></div>`
-                    : db.schedules.map((s, i) => `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 relative">
-                            <button onclick="db.schedules.splice(${i},1);saveData();" class="absolute top-3 right-3 text-slate-400 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
-                            <div class="text-xs text-slate-500 mb-1">
-                                <span><i class="fa-regular fa-clock mr-1"></i>${s.time || ''}</span>
-                                <span class="${s.type==='all'?'bg-teal-100 text-teal-800':'bg-amber-100 text-amber-800'} px-2 py-0.5 rounded-full font-bold ml-2">${s.type==='all'?'全員一緒':'自由・別行動'}</span>
-                            </div>
-                            <h3 class="font-bold text-slate-800">${s.title || ''}</h3>
-                            <p class="text-xs text-slate-600 mt-1"><i class="fa-solid fa-location-dot mr-1 text-red-500"></i>${s.location || ''}</p>
-                        </div>`).join('');
-                const schList = document.getElementById('schedule-list');
-                if(schList) schList.innerHTML = schHtml;
-
-                let voteHtml = db.votes.length === 0
-                    ? `<div class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6"><i class="fa-solid fa-thumbs-up text-4xl text-slate-300 mb-2"></i><p class="text-slate-500 font-medium text-sm">希望がありません</p><p class="text-xs text-slate-400 mt-1">「希望追加」から提案してください</p></div>`
-                    : db.votes.map((v, i) => `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
-                            <div>
-                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded mr-2">${v.family || ''}</span>
-                                <h3 class="font-bold text-slate-800 inline">${v.title || ''}</h3>
-                                <p class="text-xs text-slate-500 mt-1">${v.desc || ''}</p>
-                            </div>
-                            <button onclick="db.votes[${i}].likes=(db.votes[${i}].likes||1)+1;saveData();" class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-lg font-bold text-sm flex items-center gap-1">
-                                <i class="fa-solid fa-heart"></i> ${v.likes || 1}
-                            </button>
-                        </div>`).join('');
-                const voteList = document.getElementById('vote-list');
-                if(voteList) voteList.innerHTML = voteHtml;
-
-                let expHtml = db.expenses.length === 0
-                    ? `<div class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 p-6"><i class="fa-solid fa-wallet text-4xl text-slate-300 mb-2"></i><p class="text-slate-500 font-medium text-sm">立て替え記録がありません</p><p class="text-xs text-slate-400 mt-1">「支出記録」から入力してください</p></div>`
-                    : db.expenses.map((e, i) => `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center relative">
-                            <button onclick="db.expenses.splice(${i},1);saveData();" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 text-xs"><i class="fa-solid fa-trash"></i></button>
-                            <div>
-                                <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded font-bold">${e.payer || ''}が支払い</span>
-                                <h3 class="font-bold text-slate-800 mt-1">${e.title || ''}</h3>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-bold text-teal-700">¥${Number(e.amount || 0).toLocaleString()}</span>
-                            </div>
-                        </div>`).join('');
-                const expList = document.getElementById('expense-list');
-                if(expList) expList.innerHTML = expHtml;
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        function addFamily() {
-            db.trip.families.push({ name: '', adults: 2, kids: 0 });
-            saveData();
-        }
-
-        function saveSettings() {
-            const titleEl = document.getElementById('trip-title');
-            if(titleEl) {
-                db.trip.title = titleEl.value;
-                try {
-                    localStorage.setItem('ft_trip', JSON.stringify(db.trip));
-                } catch(e) {}
-            }
-        }
-
-        function addSchedule() {
-            const titleEl = document.getElementById('sch-title');
-            if(!titleEl || !titleEl.value) return;
-            db.schedules.push({
-                time: document.getElementById('sch-time').value,
-                title: titleEl.value,
-                location: document.getElementById('sch-loc').value,
-                type: document.getElementById('sch-type').value
-            });
-            document.getElementById('sch-time').value = '';
-            titleEl.value = '';
-            document.getElementById('sch-loc').value = '';
-            closeModal('schedule');
-            saveData();
-        }
-
-        function addVote() {
-            const titleEl = document.getElementById('vote-title');
-            if(!titleEl || !titleEl.value) return;
-            db.votes.push({
-                family: document.getElementById('vote-family').value,
-                title: titleEl.value,
-                desc: document.getElementById('vote-desc').value,
-                likes: 1
-            });
-            document.getElementById('vote-family').value = '';
-            titleEl.value = '';
-            document.getElementById('vote-desc').value = '';
-            closeModal('vote');
-            saveData();
-        }
-
-        function addExpense() {
-            const titleEl = document.getElementById('exp-title');
-            const amtEl = document.getElementById('exp-amount');
-            if(!titleEl || !titleEl.value || !amtEl || !amtEl.value) return;
-            db.expenses.push({
-                payer: document.getElementById('exp-payer').value,
-                title: titleEl.value,
-                amount: amtEl.value
-            });
-            document.getElementById('exp-payer').value = '';
-            titleEl.value = '';
-            amtEl.value = '';
-            closeModal('expense');
-            saveData();
-        }
-
-        // 初期描画実行
-        render();
-    </script>
-</body>
-</html>
+            <input id="sch-title"
