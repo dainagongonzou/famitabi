@@ -8,7 +8,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- PWAマニフェスト動的生成 -->
     <script>
         try {
             const manifest = {
@@ -47,7 +46,7 @@
         <div id="tab-timeline" class="tab-content space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="font-bold text-lg text-slate-700">旅行のしおり</h2>
-                <button onclick="openModal('schedule')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i>予定追加</button>
+                <button type="button" onclick="openModal('schedule')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i>予定追加</button>
             </div>
             <div id="schedule-list" class="space-y-3"></div>
         </div>
@@ -55,48 +54,4 @@
         <!-- 投票タブ -->
         <div id="tab-votes" class="tab-content space-y-4" style="display: none;">
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-lg text-slate-700">みんなの希望</h2>
-                <button onclick="openModal('vote')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i>希望追加</button>
-            </div>
-            <div id="vote-list" class="space-y-3"></div>
-        </div>
-
-        <!-- 精算タブ -->
-        <div id="tab-money" class="tab-content space-y-4" style="display: none;">
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-lg text-slate-700">精算管理</h2>
-                <button onclick="openModal('expense')" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i>支出記録</button>
-            </div>
-            <div id="expense-list" class="space-y-3"></div>
-        </div>
-
-        <!-- 設定タブ -->
-        <div id="tab-settings" class="tab-content space-y-4" style="display: none;">
-            <div class="bg-white p-4 rounded-xl shadow border border-slate-200 space-y-3">
-                <h2 class="font-bold text-teal-800"><i class="fa-solid fa-gear mr-2"></i>家族・旅行設定</h2>
-                <div>
-                    <label class="block text-xs text-slate-500 mb-1">旅行タイトル</label>
-                    <input id="trip-title" type="text" oninput="db.trip.title=this.value; saveStorageOnly();" class="w-full p-2 border rounded text-sm" placeholder="例：夏休み家族旅行">
-                </div>
-                <h3 class="font-bold text-sm text-slate-700 pt-2">参加家族一覧</h3>
-                <div id="family-list" class="space-y-2"></div>
-                <button onclick="addFamily()" class="w-full bg-slate-100 text-teal-700 py-2 rounded text-sm font-bold border border-dashed border-teal-300">+ 家族を追加</button>
-            </div>
-        </div>
-    </main>
-
-    <!-- ボトムナビゲーション -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around py-3 text-xs text-slate-500 z-40 max-w-md mx-auto shadow-lg">
-        <button onclick="switchTab('timeline')" id="nav-timeline" class="flex flex-col items-center text-teal-600 font-bold"><i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>しおり</button>
-        <button onclick="switchTab('votes')" id="nav-votes" class="flex flex-col items-center"><i class="fa-solid fa-list-check text-lg mb-0.5"></i>希望</button>
-        <button onclick="switchTab('money')" id="nav-money" class="flex flex-col items-center"><i class="fa-solid fa-yen-sign text-lg mb-0.5"></i>精算</button>
-        <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center"><i class="fa-solid fa-gear text-lg mb-0.5"></i>設定</button>
-    </nav>
-
-    <!-- モーダル：予定追加・編集 -->
-    <div id="modal-schedule" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3 shadow-xl">
-            <h3 id="sch-modal-title" class="font-bold text-base text-slate-800">予定の追加</h3>
-            <input id="sch-index" type="hidden" value="-1">
-            <input id="sch-time" type="text" class="w-full p-2 border rounded text-sm" placeholder="時間（例: 10:00）">
-            <input id="sch-title"
+                
